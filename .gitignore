@@ -1,0 +1,47 @@
+# Entornos virtuales
+.venv/
+venv/
+env/
+
+# Bytecode y caché de Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Distribución / empaquetado
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Pruebas y cobertura
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Variables de entorno y secretos
+.env
+.env.*
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE / editor
+.vscode/
+.idea/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# archivos internos del proyecto
+propuesta.txt
+
+
+# Base de datos local y datos de ejemplo generados
+data/eduvisual.db
+data/ejemplos/

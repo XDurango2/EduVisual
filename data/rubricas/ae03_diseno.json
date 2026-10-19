@@ -1,0 +1,51 @@
+{
+  "id": "AE-03",
+  "nombre": "Diseño de soluciones de ingeniería",
+  "programa": "Ingeniería en Software (datos de ejemplo)",
+  "descripcion": "Capacidad de diseñar soluciones a problemas de ingeniería que cumplan necesidades específicas, considerando factores de salud pública, seguridad, bienestar y contexto.",
+  "nivel_minimo": 3,
+  "niveles": {
+    "1": "Insuficiente",
+    "2": "Básico",
+    "3": "Satisfactorio",
+    "4": "Sobresaliente"
+  },
+  "indicadores": [
+    {
+      "id": "I1",
+      "nombre": "Formulación del problema y requisitos",
+      "descripcion": "Identifica y formula el problema, las necesidades de los usuarios y los requisitos de la solución.",
+      "niveles": {
+        "1": "No define el problema o lo describe de forma vaga.",
+        "2": "Enuncia el problema y un objetivo, sin analizar necesidades ni requisitos.",
+        "3": "Define el problema, las necesidades de los usuarios y el alcance.",
+        "4": "Define el problema con requisitos, restricciones y especificaciones medibles, a partir de las necesidades de los usuarios."
+      },
+      "palabras_clave": ["problema", "requisitos", "restricciones", "usuarios", "alcance", "objetivo", "especificaciones", "necesidades"]
+    },
+    {
+      "id": "I2",
+      "nombre": "Generación y selección de alternativas",
+      "descripcion": "Plantea varias alternativas de solución y selecciona una con criterios justificados.",
+      "niveles": {
+        "1": "Presenta una única solución sin considerar otras.",
+        "2": "Menciona alternativas pero no las compara.",
+        "3": "Compara alternativas indicando ventajas y desventajas.",
+        "4": "Compara alternativas con criterios ponderados y justifica técnicamente la selección."
+      },
+      "palabras_clave": ["alternativas", "comparación", "criterios", "ventajas", "desventajas", "matriz", "justificación", "selección"]
+    },
+    {
+      "id": "I3",
+      "nombre": "Validación e impacto de la solución",
+      "descripcion": "Valida la solución mediante pruebas y analiza su impacto, riesgos y oportunidades de mejora.",
+      "niveles": {
+        "1": "No presenta evidencia de validación.",
+        "2": "Realiza pruebas informales sin documentar resultados.",
+        "3": "Realiza pruebas, documenta resultados e identifica mejoras.",
+        "4": "Valida con métricas, analiza impacto y riesgos, y propone acciones de mejora."
+      },
+      "palabras_clave": ["pruebas", "validación", "resultados", "métricas", "impacto", "riesgos", "mejora", "seguridad"]
+    }
+  ]
+}

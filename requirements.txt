@@ -1,0 +1,8 @@
+streamlit
+pandas
+altair
+requests
+
+# Opcionales para leer evidencias en PDF / DOCX
+# pypdf
+# python-docx
