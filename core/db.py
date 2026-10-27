@@ -38,6 +38,36 @@ CREATE TABLE IF NOT EXISTS evaluaciones (
     fecha_revision TEXT,
     UNIQUE (evidencia_id, indicador_id)
 );
+CREATE TABLE IF NOT EXISTS calificaciones (
+    id INTEGER PRIMARY KEY,
+    alumno_id INTEGER NOT NULL REFERENCES alumnos(id),
+    asignatura_id INTEGER NOT NULL REFERENCES asignaturas(id),
+    periodo TEXT NOT NULL,
+    calificacion REAL NOT NULL,
+    fecha_carga TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (alumno_id, asignatura_id, periodo)
+);
+CREATE TABLE IF NOT EXISTS resultados_ceneval (
+    id INTEGER PRIMARY KEY,
+    alumno_id INTEGER NOT NULL REFERENCES alumnos(id),
+    examen TEXT NOT NULL,
+    area TEXT NOT NULL,
+    periodo TEXT NOT NULL,
+    desempeno TEXT NOT NULL,
+    puntaje INTEGER,
+    fecha_carga TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (alumno_id, examen, area, periodo)
+);
+CREATE TABLE IF NOT EXISTS cargas (
+    id INTEGER PRIMARY KEY,
+    fuente TEXT NOT NULL,
+    archivo TEXT NOT NULL,
+    filas INTEGER NOT NULL,
+    aceptadas INTEGER NOT NULL,
+    rechazadas INTEGER NOT NULL,
+    omitidas INTEGER NOT NULL,
+    fecha TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 """
 
 
@@ -77,6 +107,8 @@ def dataframe(sql: str, params: tuple = ()) -> pd.DataFrame:
 def vaciar():
     with conexion() as con:
         con.executescript(
+            "DROP TABLE IF EXISTS cargas; DROP TABLE IF EXISTS resultados_ceneval;"
+            "DROP TABLE IF EXISTS calificaciones;"
             "DROP TABLE IF EXISTS evaluaciones; DROP TABLE IF EXISTS evidencias;"
             "DROP TABLE IF EXISTS asignaturas; DROP TABLE IF EXISTS alumnos;"
         )

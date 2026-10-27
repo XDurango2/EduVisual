@@ -21,7 +21,16 @@
         "3": "Define el problema, las necesidades de los usuarios y el alcance.",
         "4": "Define el problema con requisitos, restricciones y especificaciones medibles, a partir de las necesidades de los usuarios."
       },
-      "palabras_clave": ["problema", "requisitos", "restricciones", "usuarios", "alcance", "objetivo", "especificaciones", "necesidades"]
+      "palabras_clave": [
+        "problema",
+        "requisitos",
+        "restricciones",
+        "usuarios",
+        "alcance",
+        "objetivo",
+        "especificaciones",
+        "necesidades"
+      ]
     },
     {
       "id": "I2",
@@ -33,7 +42,16 @@
         "3": "Compara alternativas indicando ventajas y desventajas.",
         "4": "Compara alternativas con criterios ponderados y justifica técnicamente la selección."
       },
-      "palabras_clave": ["alternativas", "comparación", "criterios", "ventajas", "desventajas", "matriz", "justificación", "selección"]
+      "palabras_clave": [
+        "alternativas",
+        "comparación",
+        "criterios",
+        "ventajas",
+        "desventajas",
+        "matriz",
+        "justificación",
+        "selección"
+      ]
     },
     {
       "id": "I3",
@@ -45,7 +63,64 @@
         "3": "Realiza pruebas, documenta resultados e identifica mejoras.",
         "4": "Valida con métricas, analiza impacto y riesgos, y propone acciones de mejora."
       },
-      "palabras_clave": ["pruebas", "validación", "resultados", "métricas", "impacto", "riesgos", "mejora", "seguridad"]
+      "palabras_clave": [
+        "pruebas",
+        "validación",
+        "resultados",
+        "métricas",
+        "impacto",
+        "riesgos",
+        "mejora",
+        "seguridad"
+      ]
     }
-  ]
+  ],
+  "fuentes": {
+    "evidencias": {
+      "peso": 0.5
+    },
+    "calificaciones": {
+      "peso": 0.3,
+      "asignaturas": [
+        "Ingeniería de Software",
+        "Proyecto Integrador"
+      ],
+      "escala": [
+        {
+          "desde": 0,
+          "nivel": 1
+        },
+        {
+          "desde": 60,
+          "nivel": 2
+        },
+        {
+          "desde": 80,
+          "nivel": 3
+        },
+        {
+          "desde": 90,
+          "nivel": 4
+        }
+      ]
+    },
+    "ceneval": {
+      "peso": 0.2,
+      "examen": "EGEL (ejemplo)",
+      "areas": [
+        "Diseño de soluciones de software (ejemplo)"
+      ],
+      "niveles": {
+        "ANS": 1,
+        "DS": 3,
+        "DSS": 4
+      }
+    }
+  },
+  "validacion": {
+    "estado": "pendiente",
+    "validado_por": null,
+    "fecha": null,
+    "observaciones": "Rúbrica y mapeo de fuentes de ejemplo. Pendiente de validar con la Coordinación de Formación Profesional del programa (paquete 1.2)."
+  }
 }

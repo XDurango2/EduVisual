@@ -2,7 +2,7 @@ import streamlit as st
 
 from core import db
 from core.evaluador import estado_motor
-from core.rubricas import cargar_rubricas
+from core.rubricas import cargar_rubricas, errores_rubricas
 
 
 def iniciar(titulo: str):
@@ -13,9 +13,14 @@ def iniciar(titulo: str):
     with st.sidebar:
         st.caption("Motor de evaluación")
         (st.success if motor == "ollama" else st.warning)(detalle)
+        for archivo, errores in errores_rubricas().items():
+            st.error(f"Rúbrica inválida ({archivo}): " + "; ".join(errores))
     st.title(titulo)
 
 
 def rubrica_activa() -> dict:
     rubricas = cargar_rubricas()
+    if not rubricas:
+        st.error("No hay rúbricas válidas en data/rubricas. Revisa los errores en la barra lateral.")
+        st.stop()
     return rubricas[next(iter(rubricas))]

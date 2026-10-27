@@ -2,7 +2,12 @@ streamlit
 pandas
 altair
 requests
+openpyxl   # carga de calificaciones y resultados CENEVAL desde Excel
 
 # Opcionales para leer evidencias en PDF / DOCX
 # pypdf
 # python-docx
+
+# Pruebas automatizadas
+# pytest
+# pytest-cov
