@@ -136,3 +136,37 @@ def test_plantillas_tienen_los_encabezados_esperados():
     for fuente in ("calificaciones", "ceneval"):
         df = leer_tabla("p.csv", importacion.plantilla_csv(fuente))
         assert list(df.columns) == importacion.COLUMNAS[fuente]
+
+
+def test_encuestas_validas_omitidas_y_rechazadas(rubricas):
+    from core import importacion as imp
+
+    df = pd.DataFrame(
+        [
+            ["empleador", "EMP-1", "AE-03", "2026-1", "3", "SI", "Bien"],
+            ["egresados", "EGR-1", "AE-03", "2026-1", "4", "SI", ""],
+            ["empleador", "EMP-2", "AE-99", "2026-1", "3", "SI", ""],      # sin rúbrica: se omite
+            ["alumno", "X-1", "AE-03", "2026-1", "3", "SI", ""],            # tipo inválido
+            ["empleador", "EMP-3", "AE-03", "2026-1", "6", "SI", ""],       # fuera de escala
+            ["empleador", "EMP-1", "AE-03", "2026-1", "2", "SI", ""],       # duplicado
+        ],
+        columns=imp.COLUMNAS["encuestas"],
+    ).astype(str)
+    v = imp.validar_encuestas(df, rubricas, "enc.csv")
+    assert len(v.validas) == 2 and len(v.omitidas) == 1 and len(v.rechazos) == 3
+    assert imp.importar(v) == 2
+    assert db.consulta("SELECT COUNT(*) AS n FROM encuestas")[0]["n"] == 2
+
+
+def test_encuestas_entran_al_indice(rubricas):
+    from core import importacion as imp
+    from core.adopcion import resumen_adopcion
+
+    df = pd.DataFrame(
+        [["empleador", "E1", "AE-03", "2026-1", "4", "SI", ""], ["egresado", "G1", "AE-03", "2026-1", "2", "SI", ""]],
+        columns=imp.COLUMNAS["encuestas"],
+    ).astype(str)
+    imp.importar(imp.validar_encuestas(df, rubricas))
+    tabla, indice = resumen_adopcion(rubricas["AE-03"])
+    assert indice == 0.5  # 4 -> nivel 3 (cumple), 2 -> nivel 1 (no cumple)
+    assert tabla.set_index("fuente").loc["encuestas", "Registros"] == 2

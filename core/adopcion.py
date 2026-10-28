@@ -4,8 +4,8 @@ Cada fuente se convierte a la escala de la rúbrica (niveles 1-4):
 - evidencias: nivel final del docente o, si no hay revisión, el sugerido por el motor;
 - calificaciones: según la escala de la rúbrica (fuentes.calificaciones.escala);
 - CENEVAL: según el desempeño por área (fuentes.ceneval.niveles);
-- encuestas a empleadores (RF-003): según la escala de la rúbrica (fuentes.encuestas.escala) aplicada a la
-  respuesta Likert de 1 a 5 de cada empleador.
+- encuestas de empleadores y egresados (RF-003): según la escala de la rúbrica (fuentes.encuestas.escala)
+  aplicada a la respuesta Likert de 1 a 5 de cada respondente.
 El índice combinado pondera el % de cumplimiento de cada fuente con sus pesos, re-normalizados
 entre las fuentes que tienen datos.
 """
@@ -17,9 +17,9 @@ ETIQUETAS = {
     "evidencias": "Evidencias (rúbrica)",
     "calificaciones": "Calificaciones",
     "ceneval": "CENEVAL",
-    "encuestas": "Encuestas a empleadores",
+    "encuestas": "Encuestas",
 }
-UNIDADES = {"encuestas": "empleadores"}  # lo que cuenta la columna "Sujetos"; por defecto, alumnos.
+UNIDADES = {"encuestas": "respondentes"}  # lo que cuenta la columna "Sujetos"; por defecto, alumnos.
 
 
 def nivel_por_calificacion(calificacion: float, escala: list[dict]) -> int:
@@ -30,8 +30,24 @@ def nivel_por_calificacion(calificacion: float, escala: list[dict]) -> int:
     return nivel
 
 
+def niveles_encuestas(rubrica: dict) -> pd.DataFrame:
+    """Encuestas del AE con su nivel (1-4): la respuesta Likert se convierte con fuentes.encuestas.escala.
+    Si la rúbrica define `tipos`, sólo cuentan esos respondentes. Columnas: tipo, respondente, valoracion, comentario, nivel."""
+    cfg = rubrica.get("fuentes", {}).get("encuestas")
+    columnas = ["tipo", "respondente", "valoracion", "comentario", "nivel"]
+    if not cfg:
+        return pd.DataFrame(columns=columnas)
+    enc = db.dataframe(
+        "SELECT tipo, respondente, valoracion, comentario FROM encuestas WHERE ae_id = ?", (rubrica["id"],)
+    )
+    if cfg.get("tipos"):
+        enc = enc[enc["tipo"].isin(cfg["tipos"])]
+    enc["nivel"] = enc["valoracion"].map(lambda x: nivel_por_calificacion(x, cfg["escala"]))
+    return enc[columnas]
+
+
 def niveles_por_fuente(rubrica: dict) -> pd.DataFrame:
-    """Una fila por registro con columnas: fuente, sujeto (matrícula o empleador), nivel."""
+    """Una fila por registro con columnas: fuente, sujeto (matrícula o respondente de encuesta), nivel."""
     fuentes = rubrica.get("fuentes", {})
     partes = []
 
@@ -66,12 +82,8 @@ def niveles_por_fuente(rubrica: dict) -> pd.DataFrame:
         partes.append(cen[["sujeto", "nivel"]].assign(fuente="ceneval"))
 
     if "encuestas" in fuentes:
-        cfg = fuentes["encuestas"]
-        enc = db.dataframe(
-            "SELECT empleador AS sujeto, respuesta FROM encuestas_empleadores WHERE ae_id = ?", (rubrica["id"],)
-        )
-        enc["nivel"] = enc["respuesta"].map(lambda x: nivel_por_calificacion(x, cfg["escala"]))
-        partes.append(enc[["sujeto", "nivel"]].assign(fuente="encuestas"))
+        enc = niveles_encuestas(rubrica)
+        partes.append(enc[["respondente", "nivel"]].rename(columns={"respondente": "sujeto"}).assign(fuente="encuestas"))
 
     return pd.concat(partes, ignore_index=True) if partes else pd.DataFrame(columns=["sujeto", "nivel", "fuente"])
 

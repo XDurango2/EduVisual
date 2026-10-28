@@ -6,6 +6,7 @@ RUBRICAS_DIR = Path(__file__).resolve().parent.parent / "data" / "rubricas"
 
 NIVELES = {"1", "2", "3", "4"}
 ESTADOS_VALIDACION = {"pendiente", "en revision", "validada"}
+GRADOS_OFICIALES = ("NS", "SA", "SO")  # No satisfactorio, Satisfactorio, Sobresaliente
 
 
 def validar_rubrica(r: dict) -> list[str]:
@@ -63,6 +64,15 @@ def validar_rubrica(r: dict) -> list[str]:
                 errores.append("la escala de encuestas debe iniciar en 1 y ser ascendente (respuestas de 1 a 5)")
             if any(e["nivel"] not in (1, 2, 3, 4) for e in enc.get("escala", [])):
                 errores.append("la escala de encuestas solo admite niveles 1 a 4")
+            if enc.get("tipos") and not set(enc["tipos"]) <= {"empleador", "egresado"}:
+                errores.append("'fuentes.encuestas.tipos' solo admite 'empleador' y 'egresado'")
+
+    eq = r.get("formato_oficial", {}).get("equivalencia")
+    if eq is not None:
+        if set(eq) != NIVELES:
+            errores.append("'formato_oficial.equivalencia' debe cubrir exactamente los niveles 1 a 4")
+        elif any(g not in GRADOS_OFICIALES for g in eq.values()):
+            errores.append(f"'formato_oficial.equivalencia' solo admite: {', '.join(GRADOS_OFICIALES)}")
 
     val = r.get("validacion")
     if val and val.get("estado") not in ESTADOS_VALIDACION:

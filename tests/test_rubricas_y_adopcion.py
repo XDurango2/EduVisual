@@ -61,3 +61,62 @@ def test_indice_combina_las_cuatro_fuentes(rubricas):
     assert abs(indice - esperado) < 1e-9
     assert set(tabla["fuente"]) == {"evidencias", "calificaciones", "ceneval", "encuestas"}
     assert db.consulta("SELECT COUNT(*) AS n FROM cargas")[0]["n"] == 3
+
+
+def test_resumen_y_reporte_consolidado(rubricas):
+    import io
+
+    from core import seed
+    from core.reportes import libro_excel
+    from core.resumen import resumen_preliminar
+
+    seed.sembrar()
+    r = rubricas["AE-03"]
+    assert "índice de adopción combinado" in resumen_preliminar(r)
+    hojas = pd.ExcelFile(io.BytesIO(libro_excel(r))).sheet_names
+    assert {"Resumen", "Adopción por fuente", "Por alumno", "Encuestas"} <= set(hojas)
+
+
+def test_resumen_sin_datos(rubricas):
+    from core.resumen import resumen_preliminar
+
+    assert "Aún no hay datos" in resumen_preliminar(rubricas["AE-03"])
+
+
+def test_reporte_pdf(rubricas):
+    from core import seed
+    from core.reportes import pdf
+
+    seed.sembrar()
+    assert pdf(rubricas["AE-03"]).startswith(b"%PDF")
+
+
+def test_equivalencia_oficial_coherente_con_nivel_minimo(rubricas):
+    from core import reportes
+
+    r = rubricas["AE-03"]
+    eq = reportes.equivalencia(r)
+    assert eq == {1: "NS", 2: "NS", 3: "SA", 4: "SO"}
+    # "Cumple" en el formato oficial (SA o SO) equivale a nivel >= nivel_minimo.
+    assert all((eq[n] != "NS") == (n >= r["nivel_minimo"]) for n in eq)
+
+
+def test_validador_rechaza_equivalencia_invalida(rubricas):
+    r = copy.deepcopy(rubricas["AE-03"])
+    r["formato_oficial"]["equivalencia"]["2"] = "BUENO"
+    assert "formato_oficial.equivalencia" in " | ".join(validar_rubrica(r))
+
+
+def test_cedula_distribucion_y_pdf(rubricas):
+    from core import reportes, seed
+
+    seed.sembrar()
+    r = rubricas["AE-03"]
+    asignatura = db.consulta("SELECT nombre FROM asignaturas")[0]["nombre"]
+    cedula = reportes.cedula_ua(r, asignatura)
+    desglose = cedula["Desglose"]
+    # Cada alumno tiene exactamente una X por indicador.
+    for ind in r["indicadores"]:
+        assert (desglose[[f"{ind['id']} {g}" for g in reportes.GRADOS]] == "X").sum(axis=1).eq(1).all()
+    assert len(cedula["Distribución"]) == len(r["indicadores"])
+    assert reportes.cedula_pdf(r, asignatura, {"clave": "1"}).startswith(b"%PDF")

@@ -3,12 +3,18 @@ import streamlit as st
 
 from core import db
 from core.adopcion import resumen_adopcion
+from core.resumen import resumen_preliminar
 from core.ui import iniciar, rubrica_activa
 
 iniciar("Panel de resultados")
 rubrica = rubrica_activa()
 minimo = rubrica["nivel_minimo"]
 nombres = {i["id"]: i["nombre"] for i in rubrica["indicadores"]}
+
+with st.container(border=True):
+    st.markdown("**Resumen preliminar**")
+    st.markdown(resumen_preliminar(rubrica))
+    st.caption("Redactado con reglas a partir de las métricas de esta página (no con el LLM). Borrador sujeto a revisión.")
 
 st.subheader("Adopción del Atributo de Egreso por fuente")
 tabla, indice = resumen_adopcion(rubrica)
@@ -34,7 +40,7 @@ if not con_datos.empty:
         ).properties(height=140),
         width="stretch",
     )
-st.caption("Las calificaciones, los resultados CENEVAL y las encuestas a empleadores se cargan en la página «Carga de datos».")
+st.caption("Calificaciones, CENEVAL y encuestas se cargan en la página «Carga de datos».")
 
 st.divider()
 st.subheader("Evidencias evaluadas con la rúbrica")
@@ -85,19 +91,19 @@ st.altair_chart(
     width="stretch",
 )
 
-st.subheader("Distribución de niveles por asignatura")
-distribucion = df.groupby(["asignatura", "nivel"], as_index=False).size()
+st.subheader("Distribución de niveles por indicador")
+distribucion = df.groupby(["indicador", "nivel"], as_index=False).size()
 st.altair_chart(
     alt.Chart(distribucion).mark_bar().encode(
-        x=alt.X("asignatura:N", title=None, axis=alt.Axis(labelAngle=0)),
+        x=alt.X("indicador:N", title=None, axis=alt.Axis(labelAngle=0)),
         y=alt.Y("size:Q", title="Evaluaciones", stack="normalize", axis=alt.Axis(format="%")),
         color=alt.Color("nivel:O", title="Nivel", scale=alt.Scale(scheme="blues")),
-        tooltip=["asignatura", "nivel", "size"],
+        tooltip=["indicador", "nivel", "size"],
     ),
     width="stretch",
 )
 
 st.subheader("Detalle por alumno")
-tabla = df.pivot_table(index=["alumno", "asignatura"], columns="indicador_id", values="nivel", aggfunc="mean").round(1)
+tabla = df.pivot_table(index=["alumno"], columns="indicador_id", values="nivel", aggfunc="mean").round(1)
 tabla["promedio"] = tabla.mean(axis=1).round(2)
 st.dataframe(tabla, width="stretch")

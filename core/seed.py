@@ -1,5 +1,6 @@
-"""Datos de ejemplo sintéticos para la rúbrica AE-03: alumnos, asignaturas, evidencias,
-calificaciones, resultados CENEVAL y encuestas a empleadores. No contiene datos personales reales.
+"""Datos de ejemplo sintéticos para la rúbrica AE-03: alumnos, una unidad de aprendizaje (UA), evidencias,
+calificaciones, resultados CENEVAL y encuestas de empleadores y egresados del programa de Ingeniería en Computación,
+con la UA Ingeniería de Software. No contiene datos personales reales.
 
 Uso: python -m core.seed
 """
@@ -9,6 +10,7 @@ from pathlib import Path
 import pandas as pd
 
 from core import db, importacion
+from core.adopcion import nivel_por_calificacion
 from core.evaluador import evaluar
 from core.rubricas import cargar_rubricas
 
@@ -25,7 +27,8 @@ ALUMNOS = [
     ("A0107", "Valeria Ortiz"),
     ("A0108", "Jorge Castillo"),
 ]
-ASIGNATURAS = ["Ingeniería de Software", "Proyecto Integrador"]
+# Un solo programa (Ingeniería en Computación) con una sola UA, ambos de demostración.
+ASIGNATURAS = ["Ingeniería de Software"]
 
 # Fragmentos por indicador y nivel (1-4), escritos para ser coherentes con la rúbrica.
 FRAGMENTOS = {
@@ -76,9 +79,8 @@ def sembrar(reiniciar: bool = True, semilla: int = 42) -> dict:
         habilidad = rng.uniform(1.4, 3.9)
         habilidades[matricula] = habilidad
         for asig_id, asig in zip(asignatura_ids, ASIGNATURAS):
-            bono = 0.4 if asig == "Proyecto Integrador" else 0.0
             niveles = {
-                i["id"]: min(max(round(habilidad + bono + rng.uniform(-0.7, 0.7)), 1), 4)
+                i["id"]: min(max(round(habilidad + rng.uniform(-0.7, 0.7)), 1), 4)
                 for i in rubrica["indicadores"]
             }
             texto = _redactar(asig, nombre, niveles)
@@ -102,19 +104,11 @@ def sembrar(reiniciar: bool = True, semilla: int = 42) -> dict:
 
 
 PERIODO = "2026-1"
-EMPLEADORES = [
-    "Empresa Software Ejemplo A",
-    "Empresa Software Ejemplo B",
-    "Consultoría TI Ejemplo",
-    "Manufactura Ejemplo",
-    "Gobierno Digital Ejemplo",
-    "Startup Ejemplo",
-]
 
 
 def _sembrar_fuentes(rng: random.Random, habilidades: dict[str, float], rubrica: dict) -> dict:
-    """Genera calificaciones, resultados CENEVAL y encuestas a empleadores sintéticos, los escribe como CSV de
-    ejemplo y los importa con el mismo flujo de validación que usa la app (RF-001, RF-002 y RF-003)."""
+    """Genera calificaciones, resultados CENEVAL y encuestas sintéticos, los escribe como CSV de ejemplo y los
+    importa con el mismo flujo de validación que usa la app (RF-001, RF-002 y RF-003)."""
     cfg_cen = rubrica["fuentes"]["ceneval"]
     nombres = dict(ALUMNOS)
 
@@ -132,25 +126,34 @@ def _sembrar_fuentes(rng: random.Random, habilidades: dict[str, float], rubrica:
         ceneval.append([matricula, nombres[matricula], cfg_cen["examen"], cfg_cen["areas"][0], PERIODO, desempeno, puntaje])
     df_cen = pd.DataFrame(ceneval, columns=importacion.COLUMNAS["ceneval"])
 
-    # Encuestas: la valoración de cada empleador sigue la habilidad promedio de la generación, con ruido.
-    promedio = sum(habilidades.values()) / len(habilidades)
+    # Encuestas de empleadores y egresados (Likert 1-5): una por respondente, con valoración cercana a la habilidad
+    # del alumno al que corresponde el folio, más una fila sin consentimiento que se omite.
+    comentarios = {
+        1: "Dificultad para justificar decisiones de diseño.",
+        2: "Cumple lo básico; le falta considerar restricciones del contexto.",
+        3: "Buen criterio de diseño y comunicación técnica.",
+        4: "Destaca por integrar seguridad y bienestar en sus soluciones.",
+    }
     encuestas = []
-    for empleador in EMPLEADORES:
-        respuesta = round(min(max(1 + (promedio - 1) * 1.1 + rng.uniform(-0.8, 0.8), 1), 5) * 2) / 2
-        encuestas.append([empleador, AE_ID, PERIODO, respuesta, "SI"])
-    encuestas.append(["Empresa Sin Consentimiento (ejemplo)", AE_ID, PERIODO, 2, "NO"])  # se omite
+    for k, habilidad in enumerate(habilidades.values(), start=1):
+        for tipo, prefijo in (("egresado", "EGR"), ("empleador", "EMP")):
+            valoracion = round(min(max(1 + (habilidad - 1) * 4 / 3 + rng.uniform(-1, 1), 1), 5) * 2) / 2
+            nivel = nivel_por_calificacion(valoracion, rubrica["fuentes"]["encuestas"]["escala"])
+            comentario = comentarios[nivel] if rng.random() < 0.5 else ""
+            encuestas.append([tipo, f"{prefijo}-{k:03d}", rubrica["id"], PERIODO, valoracion, "SI", comentario])
+    encuestas.append(["empleador", "EMP-SIN-CONSENTIMIENTO", rubrica["id"], PERIODO, 2, "NO", ""])  # se omite
     df_enc = pd.DataFrame(encuestas, columns=importacion.COLUMNAS["encuestas"])
-    df_enc.to_csv(EJEMPLOS_DIR / "encuestas_ejemplo.csv", index=False, encoding="utf-8-sig")
 
     # Archivo con errores intencionales para demostrar la validación en la página de carga.
     errores = df_cal.copy()
     errores.loc[len(errores)] = ["A0101", "", "Cálculo Diferencial", PERIODO, 90]   # no tributa al AE: se omite
     errores.loc[len(errores)] = ["", "Sin Matrícula", ASIGNATURAS[0], PERIODO, 80]  # falta matrícula
     errores.loc[len(errores)] = ["A0102", "", ASIGNATURAS[0], "2026/1", 85]        # periodo inválido
-    errores.loc[len(errores)] = ["A0103", "", ASIGNATURAS[1], PERIODO, 105]        # fuera de rango
+    errores.loc[len(errores)] = ["A0103", "", ASIGNATURAS[0], PERIODO, 105]        # fuera de rango
 
     df_cal.to_csv(EJEMPLOS_DIR / "calificaciones_ejemplo.csv", index=False, encoding="utf-8-sig")
     df_cen.to_csv(EJEMPLOS_DIR / "ceneval_ejemplo.csv", index=False, encoding="utf-8-sig")
+    df_enc.to_csv(EJEMPLOS_DIR / "encuestas_ejemplo.csv", index=False, encoding="utf-8-sig")
     errores.to_csv(EJEMPLOS_DIR / "calificaciones_con_errores.csv", index=False, encoding="utf-8-sig")
 
     rubricas = {rubrica["id"]: rubrica}

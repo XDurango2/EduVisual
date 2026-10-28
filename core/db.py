@@ -58,14 +58,16 @@ CREATE TABLE IF NOT EXISTS resultados_ceneval (
     fecha_carga TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (alumno_id, examen, area, periodo)
 );
-CREATE TABLE IF NOT EXISTS encuestas_empleadores (
+CREATE TABLE IF NOT EXISTS encuestas (
     id INTEGER PRIMARY KEY,
-    empleador TEXT NOT NULL,
+    tipo TEXT NOT NULL,
+    respondente TEXT NOT NULL,
     ae_id TEXT NOT NULL,
     periodo TEXT NOT NULL,
-    respuesta REAL NOT NULL,
+    valoracion REAL NOT NULL,
+    comentario TEXT NOT NULL DEFAULT '',
     fecha_carga TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (empleador, ae_id, periodo)
+    UNIQUE (tipo, respondente, ae_id, periodo)
 );
 CREATE TABLE IF NOT EXISTS cargas (
     id INTEGER PRIMARY KEY,
@@ -116,8 +118,7 @@ def dataframe(sql: str, params: tuple = ()) -> pd.DataFrame:
 def vaciar():
     with conexion() as con:
         con.executescript(
-            "DROP TABLE IF EXISTS cargas; DROP TABLE IF EXISTS resultados_ceneval;"
-            "DROP TABLE IF EXISTS encuestas_empleadores;"
+            "DROP TABLE IF EXISTS cargas; DROP TABLE IF EXISTS encuestas; DROP TABLE IF EXISTS resultados_ceneval;"
             "DROP TABLE IF EXISTS calificaciones;"
             "DROP TABLE IF EXISTS evaluaciones; DROP TABLE IF EXISTS evidencias;"
             "DROP TABLE IF EXISTS asignaturas; DROP TABLE IF EXISTS alumnos;"

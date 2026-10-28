@@ -23,4 +23,10 @@ def rubrica_activa() -> dict:
     if not rubricas:
         st.error("No hay rúbricas válidas en data/rubricas. Revisa los errores en la barra lateral.")
         st.stop()
-    return rubricas[next(iter(rubricas))]
+    if len(rubricas) > 1:
+        # La clave se repite en todas las páginas, así que la elección se conserva al navegar.
+        with st.sidebar:
+            ae = st.selectbox("Atributo de Egreso", list(rubricas), format_func=lambda k: f"{k} · {rubricas[k]['nombre']}", key="ae_activo")
+    else:
+        ae = next(iter(rubricas))
+    return rubricas[ae]

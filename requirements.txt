@@ -3,6 +3,7 @@ pandas
 altair
 requests
 openpyxl   # carga de calificaciones y resultados CENEVAL desde Excel
+reportlab  # reporte en PDF
 
 # Opcionales para leer evidencias en PDF / DOCX
 # pypdf

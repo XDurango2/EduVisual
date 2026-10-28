@@ -8,12 +8,12 @@ from core.ui import iniciar
 iniciar("Carga de datos")
 st.markdown(
     "Integra las fuentes externas del Atributo de Egreso: **calificaciones** (RF-001), **resultados CENEVAL** "
-    "(RF-002) y **encuestas a empleadores** (RF-003). Cada archivo se valida fila por fila antes de guardarse. "
+    "(RF-002) y **encuestas** de empleadores y egresados (RF-003). Cada archivo se valida fila por fila antes de guardarse. "
     f"La meta del Plan de Calidad es que cada carga tenga **menos de {importacion.META_RECHAZO:.0%} de registros rechazados**."
 )
 st.caption(
-    "Minimización de datos: sólo se guardan asignaturas y áreas CENEVAL vinculadas a un Atributo de Egreso en su rúbrica; "
-    "las demás filas se omiten sin almacenarse. De las encuestas sólo se guardan las respuestas de empleadores que dieron su "
+    "Minimización de datos: sólo se guardan unidades de aprendizaje y áreas CENEVAL vinculadas a un Atributo de Egreso en su rúbrica; "
+    "las demás filas se omiten sin almacenarse. De las encuestas sólo se guardan las respuestas de quienes dieron su "
     "consentimiento. Usa únicamente datos sintéticos o anonimizados fuera del ambiente institucional."
 )
 
@@ -25,7 +25,7 @@ VALIDADORES = {
 }
 DESCRIPCION = {
     "calificaciones": (
-        "Columnas: `matricula`, `nombre` (sólo para alumnos nuevos), `asignatura`, `periodo` (AAAA-N, ej. 2026-1) "
+        "Columnas: `matricula`, `nombre` (sólo para alumnos nuevos), `asignatura` (nombre de la UA), `periodo` (AAAA-N, ej. 2026-1) "
         "y `calificacion` (0 a 100)."
     ),
     "ceneval": (
@@ -34,9 +34,10 @@ DESCRIPCION = {
         "Formato preliminar: confirmar con los encargados de CENEVAL."
     ),
     "encuestas": (
-        "Columnas: `empleador`, `ae` (id del Atributo de Egreso, ej. AE-03), `periodo` (AAAA-N), "
-        "`respuesta` (valoración de 1 a 5 de la capacidad de los egresados) y `consentimiento` (SI o NO). "
-        "Las filas sin consentimiento se omiten sin almacenarse. Una fila por empleador, AE y periodo."
+        "Columnas: `tipo` (empleador o egresado), `respondente` (nombre del empleador o folio anónimo de egresado, nunca matrícula), "
+        "`ae_id` (id del Atributo de Egreso, ej. AE-03), `periodo` (AAAA-N), `valoracion` (1 a 5, la capacidad de los egresados), "
+        "`consentimiento` (SI o NO) y `comentario` (opcional). Las filas sin consentimiento se omiten sin almacenarse. "
+        "Una fila por respondente, AE y periodo."
     ),
 }
 
@@ -70,7 +71,7 @@ def seccion(fuente: str):
     c1.metric("Filas", v.filas)
     c2.metric("Válidas", len(v.validas))
     c3.metric("Rechazadas", len(v.rechazos), f"{v.tasa_rechazo:.1%}", delta_color="inverse")
-    c4.metric("Omitidas", len(v.omitidas), help="Filas válidas que no se almacenan: no tributan a ningún AE o (encuestas) sin consentimiento del empleador.")
+    c4.metric("Omitidas", len(v.omitidas), help="Filas válidas que no se almacenan: no tributan a ningún AE o (encuestas) sin consentimiento.")
 
     if v.cumple_meta:
         st.success(f"La carga cumple la meta de calidad: {v.tasa_rechazo:.1%} de rechazos (meta < {importacion.META_RECHAZO:.0%}).")
@@ -99,7 +100,7 @@ def seccion(fuente: str):
             st.rerun()
 
 
-tab_cal, tab_cen, tab_enc = st.tabs(["Calificaciones (RF-001)", "Resultados CENEVAL (RF-002)", "Encuestas a empleadores (RF-003)"])
+tab_cal, tab_cen, tab_enc = st.tabs(["Calificaciones (RF-001)", "Resultados CENEVAL (RF-002)", "Encuestas (RF-003)"])
 with tab_cal:
     seccion("calificaciones")
 with tab_cen:
@@ -112,15 +113,15 @@ st.subheader("Datos integrados")
 totales = db.consulta(
     "SELECT (SELECT COUNT(*) FROM calificaciones) AS calificaciones, "
     "(SELECT COUNT(*) FROM resultados_ceneval) AS ceneval, (SELECT COUNT(*) FROM alumnos) AS alumnos, "
-    "(SELECT COUNT(*) FROM encuestas_empleadores) AS encuestas, "
-    "(SELECT COUNT(DISTINCT empleador) FROM encuestas_empleadores) AS empleadores"
+    "(SELECT COUNT(*) FROM encuestas) AS encuestas, "
+    "(SELECT COUNT(DISTINCT respondente) FROM encuestas) AS respondentes"
 )[0]
 c1, c2, c3, c4, c5 = st.columns(5)
 c1.metric("Calificaciones", totales["calificaciones"])
 c2.metric("Resultados CENEVAL", totales["ceneval"])
 c3.metric("Alumnos", totales["alumnos"])
 c4.metric("Encuestas", totales["encuestas"])
-c5.metric("Empleadores", totales["empleadores"])
+c5.metric("Respondentes", totales["respondentes"])
 
 st.subheader("Bitácora de cargas")
 bitacora = db.dataframe(

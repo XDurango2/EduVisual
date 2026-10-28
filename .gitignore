@@ -45,3 +45,6 @@ propuesta.txt
 # Base de datos local y datos de ejemplo generados
 data/eduvisual.db
 data/ejemplos/
+
+# PDFs (presentaciones y formatos institucionales: no deben publicarse)
+*.pdf

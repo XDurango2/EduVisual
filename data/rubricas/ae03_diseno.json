@@ -1,7 +1,7 @@
 {
   "id": "AE-03",
   "nombre": "Diseño de soluciones de ingeniería",
-  "programa": "Ingeniería en Software (datos de ejemplo)",
+  "programa": "Ingeniería en Computación (datos sintéticos para demostración)",
   "descripcion": "Capacidad de diseñar soluciones a problemas de ingeniería que cumplan necesidades específicas, considerando factores de salud pública, seguridad, bienestar y contexto.",
   "nivel_minimo": 3,
   "niveles": {
@@ -9,6 +9,15 @@
     "2": "Básico",
     "3": "Satisfactorio",
     "4": "Sobresaliente"
+  },
+  "formato_oficial": {
+    "codigo": "PG-CFP-01-RC01 Rev. 1",
+    "equivalencia": {
+      "1": "NS",
+      "2": "NS",
+      "3": "SA",
+      "4": "SO"
+    }
   },
   "indicadores": [
     {
@@ -82,8 +91,7 @@
     "calificaciones": {
       "peso": 0.25,
       "asignaturas": [
-        "Ingeniería de Software",
-        "Proyecto Integrador"
+        "Ingeniería de Software"
       ],
       "escala": [
         {
@@ -119,6 +127,7 @@
     "encuestas": {
       "peso": 0.2,
       "pregunta": "Califique de 1 (muy bajo) a 5 (muy alto) la capacidad de los egresados para diseñar soluciones de ingeniería que cumplan necesidades específicas.",
+      "tipos": ["empleador", "egresado"],
       "escala": [
         {"desde": 1, "nivel": 1},
         {"desde": 2.5, "nivel": 2},

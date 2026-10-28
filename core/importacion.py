@@ -1,13 +1,13 @@
 """Integración de fuentes externas: calificaciones (RF-001), resultados CENEVAL (RF-002) y
-encuestas a empleadores (RF-003).
+encuestas de empleadores y egresados (RF-003).
 
 Flujo: leer_tabla() -> validar_*() -> importar_*(). La validación es fila por fila y no escribe nada;
 la importación guarda sólo las filas válidas en una transacción y registra la carga en la bitácora.
 
 Minimización de datos (Plan de Manejo de la Privacidad): sólo se almacenan calificaciones de asignaturas y
 resultados de áreas CENEVAL vinculadas a algún Atributo de Egreso. Las demás filas se omiten sin guardarse.
-Las encuestas a empleadores se guardan sólo si el empleador dio su consentimiento y el AE tiene una escala de
-encuestas en su rúbrica; no contienen datos de alumnos.
+Las encuestas de empleadores y egresados se guardan sólo si el respondente dio su consentimiento y el AE tiene una escala de
+encuestas en su rúbrica; son anónimas: no llevan matrícula ni datos de alumnos.
 """
 import io
 import re
@@ -26,18 +26,19 @@ PUNTAJE_MIN, PUNTAJE_MAX = 700, 1300  # Escala del Índice CENEVAL.
 COLUMNAS = {
     "calificaciones": ["matricula", "nombre", "asignatura", "periodo", "calificacion"],
     "ceneval": ["matricula", "nombre", "examen", "area", "periodo", "desempeno", "puntaje"],
-    "encuestas": ["empleador", "ae", "periodo", "respuesta", "consentimiento"],
+    "encuestas": ["tipo", "respondente", "ae_id", "periodo", "valoracion", "consentimiento", "comentario"],
 }
 OBLIGATORIAS = {
     "calificaciones": ["matricula", "asignatura", "periodo", "calificacion"],
     "ceneval": ["matricula", "examen", "area", "periodo", "desempeno"],
-    "encuestas": ["empleador", "ae", "periodo", "respuesta", "consentimiento"],
+    "encuestas": ["tipo", "respondente", "ae_id", "periodo", "valoracion", "consentimiento"],
 }
-RESPUESTA_MIN, RESPUESTA_MAX = 1, 5  # Escala Likert de la encuesta a empleadores.
+RESPUESTA_MIN, RESPUESTA_MAX = 1, 5  # Escala Likert de las encuestas.
 CONSENTIMIENTO = {
     "si": True, "s": True, "yes": True, "y": True, "1": True, "true": True,
     "no": False, "n": False, "0": False, "false": False,
 }
+TIPOS_ENCUESTA = {"empleador": "empleador", "empleadores": "empleador", "egresado": "egresado", "egresados": "egresado"}
 DESEMPENO = {
     "ans": "ANS", "aun no satisfactorio": "ANS",
     "ds": "DS", "satisfactorio": "DS", "desempeno satisfactorio": "DS",
@@ -135,7 +136,7 @@ def validar_calificaciones(df: pd.DataFrame, rubricas: dict[str, dict], archivo:
 
         motivo = _validar_alumno(fila, alumnos)
         if not motivo and not fila["asignatura"]:
-            motivo = "falta la asignatura"
+            motivo = "falta la asignatura (unidad de aprendizaje)"
         if not motivo and not PERIODO_RE.match(fila["periodo"]):
             motivo = f"periodo '{fila['periodo']}' inválido (formato AAAA-N, ej. 2026-1)"
         if not motivo:
@@ -222,10 +223,11 @@ def validar_ceneval(df: pd.DataFrame, rubricas: dict[str, dict], archivo: str = 
 
 
 def validar_encuestas(df: pd.DataFrame, rubricas: dict[str, dict], archivo: str = "") -> Validacion:
-    """Una fila = la valoración de un empleador sobre un AE en un periodo (1 a 5).
+    """Una fila = la valoración (1 a 5) de un empleador o egresado sobre un AE en un periodo.
+    `respondente` es el nombre del empleador o un folio anónimo de egresado, nunca una matrícula.
 
-    Se omiten (sin guardarse) las filas sin consentimiento del empleador y las de AE que no tienen escala
-    de encuestas en su rúbrica."""
+    Se omiten (sin guardarse) las filas sin consentimiento y las de AE que no tienen escala de encuestas en su
+    rúbrica."""
     v = _base("encuestas", df, archivo)
     if v.error_archivo:
         return v
@@ -237,50 +239,53 @@ def validar_encuestas(df: pd.DataFrame, rubricas: dict[str, dict], archivo: str 
     for i, registro in enumerate(df.to_dict("records")):
         n = i + 2
         fila = {c: _texto(registro.get(c)) for c in COLUMNAS["encuestas"]}
-        ref = fila["empleador"]
+        ref = fila["respondente"]
 
+        tipo = TIPOS_ENCUESTA.get(_clave(fila["tipo"]))
         motivo = None
-        if not fila["empleador"]:
-            motivo = "falta el empleador"
-        elif not fila["ae"]:
+        if not tipo:
+            motivo = f"tipo '{fila['tipo']}' no reconocido (usa empleador o egresado)"
+        elif not ref:
+            motivo = "falta el respondente"
+        elif not fila["ae_id"]:
             motivo = "falta el AE"
         elif not PERIODO_RE.match(fila["periodo"]):
             motivo = f"periodo '{fila['periodo']}' inválido (formato AAAA-N, ej. 2026-1)"
         consentimiento = CONSENTIMIENTO.get(_clave(fila["consentimiento"]))
         if not motivo and consentimiento is None:
             motivo = f"consentimiento '{fila['consentimiento']}' no reconocido (usa SI o NO)"
-        respuesta = None
+        valoracion = None
         if not motivo:
             try:
-                respuesta = float(fila["respuesta"].replace(",", "."))
-                if not RESPUESTA_MIN <= respuesta <= RESPUESTA_MAX:
-                    motivo = f"respuesta {respuesta:g} fuera de la escala {RESPUESTA_MIN}-{RESPUESTA_MAX}"
+                valoracion = float(fila["valoracion"].replace(",", "."))
+                if not RESPUESTA_MIN <= valoracion <= RESPUESTA_MAX:
+                    motivo = f"valoración {valoracion:g} fuera de la escala {RESPUESTA_MIN}-{RESPUESTA_MAX}"
             except ValueError:
-                motivo = f"respuesta '{fila['respuesta']}' no es numérica"
+                motivo = f"valoración '{fila['valoracion']}' no es numérica"
         if motivo:
-            v.rechazos.append({"fila": n, "empleador": ref, "motivo": motivo})
+            v.rechazos.append({"fila": n, "respondente": ref, "motivo": motivo})
             continue
 
         if not consentimiento:
-            v.omitidas.append({"fila": n, "empleador": ref,
-                               "motivo": "el empleador no dio su consentimiento (no se almacena)"})
+            v.omitidas.append({"fila": n, "respondente": ref,
+                               "motivo": "el respondente no dio su consentimiento (no se almacena)"})
             continue
-        ae_clave = _clave(fila["ae"])
+        ae_clave = _clave(fila["ae_id"])
         if ae_clave not in vinculadas:
             razon = ("el AE no tiene escala de encuestas en su rúbrica" if ae_clave in todas
                      else "el AE no existe en las rúbricas cargadas")
-            v.omitidas.append({"fila": n, "empleador": ref, "motivo": f"'{fila['ae']}': {razon} (no se almacena)"})
+            v.omitidas.append({"fila": n, "respondente": ref, "motivo": f"'{fila['ae_id']}': {razon} (no se almacena)"})
             continue
 
         ae_id = vinculadas[ae_clave]
-        llave = (_clave(fila["empleador"]), ae_id, fila["periodo"])
+        llave = (tipo, _clave(ref), ae_id, fila["periodo"])
         if llave in vistas:
-            v.rechazos.append({"fila": n, "empleador": ref,
-                               "motivo": "registro duplicado en el archivo (mismo empleador, AE y periodo)"})
+            v.rechazos.append({"fila": n, "respondente": ref,
+                               "motivo": "registro duplicado en el archivo (mismo tipo, respondente, AE y periodo)"})
             continue
         vistas.add(llave)
-        v.validas.append({"empleador": fila["empleador"], "ae_id": ae_id, "periodo": fila["periodo"],
-                          "respuesta": respuesta})
+        v.validas.append({"tipo": tipo, "respondente": ref, "ae_id": ae_id, "periodo": fila["periodo"],
+                          "valoracion": valoracion, "comentario": fila["comentario"]})
     return v
 
 
@@ -313,11 +318,12 @@ def importar(v: Validacion) -> int:
         for f in v.validas:
             if v.fuente == "encuestas":
                 con.execute(
-                    """INSERT INTO encuestas_empleadores (empleador, ae_id, periodo, respuesta)
-                       VALUES (?, ?, ?, ?)
-                       ON CONFLICT (empleador, ae_id, periodo) DO UPDATE SET
-                           respuesta = excluded.respuesta, fecha_carga = CURRENT_TIMESTAMP""",
-                    (f["empleador"], f["ae_id"], f["periodo"], f["respuesta"]),
+                    """INSERT INTO encuestas (tipo, respondente, ae_id, periodo, valoracion, comentario)
+                       VALUES (?, ?, ?, ?, ?, ?)
+                       ON CONFLICT (tipo, respondente, ae_id, periodo) DO UPDATE SET
+                           valoracion = excluded.valoracion, comentario = excluded.comentario,
+                           fecha_carga = CURRENT_TIMESTAMP""",
+                    (f["tipo"], f["respondente"], f["ae_id"], f["periodo"], f["valoracion"], f["comentario"]),
                 )
                 continue
             alumno_id = _id_alumno(con, f["matricula"], f["nombre"])
@@ -348,7 +354,8 @@ def plantilla_csv(fuente: str) -> bytes:
         "calificaciones": [["1234567", "Nombre Apellido", "Ingeniería de Software", "2026-1", "87"]],
         "ceneval": [["1234567", "Nombre Apellido", "EGEL (ejemplo)", "Diseño de soluciones de software (ejemplo)",
                      "2026-1", "DS", "1080"]],
-        "encuestas": [["Empresa Ejemplo S.A. de C.V.", "AE-03", "2026-1", "4", "SI"]],
+        "encuestas": [["empleador", "Empresa Ejemplo S.A. de C.V.", "AE-03", "2026-1", "4", "SI",
+                       "Buen criterio de diseño (ejemplo)"]],
     }
     df = pd.DataFrame(ejemplos[fuente], columns=COLUMNAS[fuente])
     return df.to_csv(index=False).encode("utf-8-sig")

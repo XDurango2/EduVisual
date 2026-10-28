@@ -17,7 +17,7 @@ if not asignaturas:
 
 col1, col2 = st.columns(2)
 alumno = col1.selectbox("Alumno", alumnos, format_func=lambda a: f"{a['matricula']} · {a['nombre']}")
-asignatura = col2.selectbox("Asignatura", asignaturas, format_func=lambda a: a["nombre"])
+asignatura = col2.selectbox("Unidad de aprendizaje", asignaturas, format_func=lambda a: a["nombre"])
 
 archivo = st.file_uploader("Evidencia (TXT, MD, y PDF/DOCX si están instaladas las librerías)", type=["txt", "md", "pdf", "docx"])
 texto_manual = st.text_area("...o pega el texto de la evidencia", height=200)
