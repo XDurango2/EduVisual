@@ -71,7 +71,7 @@ c3.download_button("Por UA (CSV)", por_asignatura.reset_index().to_csv(index=Fal
 
 st.subheader("Cédula oficial por unidad de aprendizaje")
 st.caption("Formato de valoración de atributo de egreso: los 4 niveles se agrupan en NS / SA / SO con la equivalencia de la rúbrica.")
-asignatura = st.selectbox("Unidad de aprendizaje", sorted(df["Asignatura"].unique()))
+asignatura = st.selectbox("Unidad de aprendizaje", sorted(df["Unidad de aprendizaje"].unique()))
 cedula = reportes.cedula_ua(rubrica, asignatura)
 eq = reportes.equivalencia(rubrica)
 st.caption("Equivalencia: " + " · ".join(f"{rubrica['niveles'][str(n)]} → {g}" for n, g in eq.items()))
