@@ -77,10 +77,10 @@
   ],
   "fuentes": {
     "evidencias": {
-      "peso": 0.5
+      "peso": 0.4
     },
     "calificaciones": {
-      "peso": 0.3,
+      "peso": 0.25,
       "asignaturas": [
         "Ingeniería de Software",
         "Proyecto Integrador"
@@ -105,7 +105,7 @@
       ]
     },
     "ceneval": {
-      "peso": 0.2,
+      "peso": 0.15,
       "examen": "EGEL (ejemplo)",
       "areas": [
         "Diseño de soluciones de software (ejemplo)"
@@ -115,6 +115,16 @@
         "DS": 3,
         "DSS": 4
       }
+    },
+    "encuestas": {
+      "peso": 0.2,
+      "pregunta": "Califique de 1 (muy bajo) a 5 (muy alto) la capacidad de los egresados para diseñar soluciones de ingeniería que cumplan necesidades específicas.",
+      "escala": [
+        {"desde": 1, "nivel": 1},
+        {"desde": 2.5, "nivel": 2},
+        {"desde": 3.5, "nivel": 3},
+        {"desde": 4.5, "nivel": 4}
+      ]
     }
   },
   "validacion": {

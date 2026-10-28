@@ -1,5 +1,5 @@
 """Datos de ejemplo sintéticos para la rúbrica AE-03: alumnos, asignaturas, evidencias,
-calificaciones y resultados CENEVAL. No contiene datos personales reales.
+calificaciones, resultados CENEVAL y encuestas a empleadores. No contiene datos personales reales.
 
 Uso: python -m core.seed
 """
@@ -102,11 +102,19 @@ def sembrar(reiniciar: bool = True, semilla: int = 42) -> dict:
 
 
 PERIODO = "2026-1"
+EMPLEADORES = [
+    "Empresa Software Ejemplo A",
+    "Empresa Software Ejemplo B",
+    "Consultoría TI Ejemplo",
+    "Manufactura Ejemplo",
+    "Gobierno Digital Ejemplo",
+    "Startup Ejemplo",
+]
 
 
 def _sembrar_fuentes(rng: random.Random, habilidades: dict[str, float], rubrica: dict) -> dict:
-    """Genera calificaciones y resultados CENEVAL sintéticos, los escribe como CSV de ejemplo y los
-    importa con el mismo flujo de validación que usa la app (RF-001 y RF-002)."""
+    """Genera calificaciones, resultados CENEVAL y encuestas a empleadores sintéticos, los escribe como CSV de
+    ejemplo y los importa con el mismo flujo de validación que usa la app (RF-001, RF-002 y RF-003)."""
     cfg_cen = rubrica["fuentes"]["ceneval"]
     nombres = dict(ALUMNOS)
 
@@ -124,6 +132,16 @@ def _sembrar_fuentes(rng: random.Random, habilidades: dict[str, float], rubrica:
         ceneval.append([matricula, nombres[matricula], cfg_cen["examen"], cfg_cen["areas"][0], PERIODO, desempeno, puntaje])
     df_cen = pd.DataFrame(ceneval, columns=importacion.COLUMNAS["ceneval"])
 
+    # Encuestas: la valoración de cada empleador sigue la habilidad promedio de la generación, con ruido.
+    promedio = sum(habilidades.values()) / len(habilidades)
+    encuestas = []
+    for empleador in EMPLEADORES:
+        respuesta = round(min(max(1 + (promedio - 1) * 1.1 + rng.uniform(-0.8, 0.8), 1), 5) * 2) / 2
+        encuestas.append([empleador, AE_ID, PERIODO, respuesta, "SI"])
+    encuestas.append(["Empresa Sin Consentimiento (ejemplo)", AE_ID, PERIODO, 2, "NO"])  # se omite
+    df_enc = pd.DataFrame(encuestas, columns=importacion.COLUMNAS["encuestas"])
+    df_enc.to_csv(EJEMPLOS_DIR / "encuestas_ejemplo.csv", index=False, encoding="utf-8-sig")
+
     # Archivo con errores intencionales para demostrar la validación en la página de carga.
     errores = df_cal.copy()
     errores.loc[len(errores)] = ["A0101", "", "Cálculo Diferencial", PERIODO, 90]   # no tributa al AE: se omite
@@ -138,7 +156,8 @@ def _sembrar_fuentes(rng: random.Random, habilidades: dict[str, float], rubrica:
     rubricas = {rubrica["id"]: rubrica}
     n_cal = importacion.importar(importacion.validar_calificaciones(df_cal, rubricas, "calificaciones_ejemplo.csv"))
     n_cen = importacion.importar(importacion.validar_ceneval(df_cen, rubricas, "ceneval_ejemplo.csv"))
-    return {"calificaciones": n_cal, "resultados_ceneval": n_cen}
+    n_enc = importacion.importar(importacion.validar_encuestas(df_enc, rubricas, "encuestas_ejemplo.csv"))
+    return {"calificaciones": n_cal, "resultados_ceneval": n_cen, "encuestas": n_enc}
 
 
 if __name__ == "__main__":

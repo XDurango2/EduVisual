@@ -22,7 +22,7 @@ for col, fila in zip(cols[1:], tabla.to_dict("records")):
     col.metric(
         f"{fila['Fuente']} · peso {fila['Peso']:.0%}",
         f"{fila['Cumplimiento']:.0%}" if fila["Registros"] else "Sin datos",
-        help=f"{fila['Registros']} registros de {fila['Alumnos']} alumnos con nivel ≥ {minimo}.",
+        help=f"{fila['Registros']} registros de {fila['Sujetos']} {fila['Unidad']}; cumplimiento = % con nivel ≥ {minimo}.",
     )
 con_datos = tabla[tabla["Registros"] > 0]
 if not con_datos.empty:
@@ -34,7 +34,7 @@ if not con_datos.empty:
         ).properties(height=140),
         width="stretch",
     )
-st.caption("Las calificaciones y los resultados CENEVAL se cargan en la página «Carga de datos».")
+st.caption("Las calificaciones, los resultados CENEVAL y las encuestas a empleadores se cargan en la página «Carga de datos».")
 
 st.divider()
 st.subheader("Evidencias evaluadas con la rúbrica")

@@ -29,6 +29,8 @@ if fuentes:
                 detalle = " — asignaturas: " + ", ".join(cfg["asignaturas"])
             elif clave == "ceneval":
                 detalle = f" — {cfg['examen']}; áreas: " + ", ".join(cfg["areas"])
+            elif clave == "encuestas":
+                detalle = f" — {cfg['pregunta']}" if cfg.get("pregunta") else ""
             st.markdown(f"- **{clave.capitalize()}** (peso {cfg['peso']:.0%}){detalle}")
 for ind in rubrica["indicadores"]:
     with st.expander(f"{ind['id']} · {ind['nombre']}"):
@@ -40,14 +42,16 @@ st.divider()
 resumen = db.consulta(
     "SELECT (SELECT COUNT(*) FROM alumnos) AS alumnos, (SELECT COUNT(*) FROM evidencias) AS evidencias, "
     "(SELECT COUNT(*) FROM evaluaciones WHERE revisado = 1) AS revisadas, "
-    "(SELECT COUNT(*) FROM calificaciones) AS calificaciones, (SELECT COUNT(*) FROM resultados_ceneval) AS ceneval"
+    "(SELECT COUNT(*) FROM calificaciones) AS calificaciones, (SELECT COUNT(*) FROM resultados_ceneval) AS ceneval, "
+    "(SELECT COUNT(*) FROM encuestas_empleadores) AS encuestas"
 )[0]
-c1, c2, c3, c4, c5 = st.columns(5)
+c1, c2, c3, c4, c5, c6 = st.columns(6)
 c1.metric("Alumnos", resumen["alumnos"])
 c2.metric("Evidencias", resumen["evidencias"])
 c3.metric("Evaluaciones revisadas", resumen["revisadas"])
 c4.metric("Calificaciones", resumen["calificaciones"])
 c5.metric("Resultados CENEVAL", resumen["ceneval"])
+c6.metric("Encuestas a empleadores", resumen["encuestas"])
 
 st.write("Los datos de ejemplo son sintéticos. Cargarlos **reemplaza** todo lo guardado en la base local.")
 if st.button("Cargar datos de ejemplo"):

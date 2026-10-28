@@ -56,6 +56,14 @@ def validar_rubrica(r: dict) -> list[str]:
             if any(v not in (1, 2, 3, 4) for v in cen.get("niveles", {}).values()):
                 errores.append("'fuentes.ceneval.niveles' solo admite niveles 1 a 4")
 
+        enc = fuentes.get("encuestas")
+        if enc:
+            desdes = [e["desde"] for e in enc.get("escala", [])]
+            if not desdes or desdes[0] != 1 or desdes != sorted(desdes):
+                errores.append("la escala de encuestas debe iniciar en 1 y ser ascendente (respuestas de 1 a 5)")
+            if any(e["nivel"] not in (1, 2, 3, 4) for e in enc.get("escala", [])):
+                errores.append("la escala de encuestas solo admite niveles 1 a 4")
+
     val = r.get("validacion")
     if val and val.get("estado") not in ESTADOS_VALIDACION:
         errores.append(f"'validacion.estado' debe ser uno de: {', '.join(sorted(ESTADOS_VALIDACION))}")

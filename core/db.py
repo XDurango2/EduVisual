@@ -58,6 +58,15 @@ CREATE TABLE IF NOT EXISTS resultados_ceneval (
     fecha_carga TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (alumno_id, examen, area, periodo)
 );
+CREATE TABLE IF NOT EXISTS encuestas_empleadores (
+    id INTEGER PRIMARY KEY,
+    empleador TEXT NOT NULL,
+    ae_id TEXT NOT NULL,
+    periodo TEXT NOT NULL,
+    respuesta REAL NOT NULL,
+    fecha_carga TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (empleador, ae_id, periodo)
+);
 CREATE TABLE IF NOT EXISTS cargas (
     id INTEGER PRIMARY KEY,
     fuente TEXT NOT NULL,
@@ -108,6 +117,7 @@ def vaciar():
     with conexion() as con:
         con.executescript(
             "DROP TABLE IF EXISTS cargas; DROP TABLE IF EXISTS resultados_ceneval;"
+            "DROP TABLE IF EXISTS encuestas_empleadores;"
             "DROP TABLE IF EXISTS calificaciones;"
             "DROP TABLE IF EXISTS evaluaciones; DROP TABLE IF EXISTS evidencias;"
             "DROP TABLE IF EXISTS asignaturas; DROP TABLE IF EXISTS alumnos;"

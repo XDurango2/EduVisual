@@ -51,7 +51,7 @@ def test_indice_renormaliza_pesos_entre_fuentes_con_datos(rubricas):
     assert tabla.set_index("fuente").loc["calificaciones", "Registros"] == 2
 
 
-def test_indice_combina_las_tres_fuentes(rubricas):
+def test_indice_combina_las_cuatro_fuentes(rubricas):
     from core import seed
 
     seed.sembrar()  # escribe en la base temporal de la prueba
@@ -59,4 +59,5 @@ def test_indice_combina_las_tres_fuentes(rubricas):
     esperado = (tabla["Cumplimiento"] * tabla["Peso"]).sum() / tabla["Peso"].sum()
     assert (tabla["Registros"] > 0).all()
     assert abs(indice - esperado) < 1e-9
-    assert db.consulta("SELECT COUNT(*) AS n FROM cargas")[0]["n"] == 2
+    assert set(tabla["fuente"]) == {"evidencias", "calificaciones", "ceneval", "encuestas"}
+    assert db.consulta("SELECT COUNT(*) AS n FROM cargas")[0]["n"] == 3
