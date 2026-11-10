@@ -1,20 +1,39 @@
 # EduVisual
 
-Prueba de concepto (Streamlit) para evaluar qué tanto adoptaron los egresados un Atributo de Egreso (AE)
-a partir de sus documentos de egreso (proyecto terminal, reporte de prácticas profesionales, de servicio social o portafolio).
-El alcance actual es un solo programa educativo (Ingeniería en Computación) con una sola unidad de aprendizaje (UA), Ingeniería de Software, con datos sintéticos para demostración.
-Además integra calificaciones, resultados CENEVAL y encuestas a empleadores para calcular el nivel de adopción de cada AE.
+Prueba de concepto (Streamlit) que **procesa** las evidencias de un Atributo de Egreso (AE) para llenar sus formatos.
+EduVisual no califica: toma actividades que el docente ya calificó en su unidad de aprendizaje (UA), las convierte al
+nivel del atributo y las combina con calificaciones finales, resultados CENEVAL y encuestas para calcular el nivel de adopción.
+El alcance actual es un solo programa educativo (Ingeniería en Computación) con una UA, Ingeniería de Software, y datos sintéticos.
 
 ## Flujo de uso
 
-1. **Carga de datos**: importar calificaciones, resultados CENEVAL y encuestas (aquí se registran los egresados).
-2. **Evaluar egresado**: elegir al egresado, subir un documento e indicar su tipo; el motor sugiere un nivel por
-   indicador con justificación y citas, y el docente confirma o corrige en la misma página.
-   La UA donde se elaboró el documento es un dato secundario que sólo agrupa resultados en la cédula oficial.
+1. **Carga de datos**: importar calificaciones finales, resultados CENEVAL y encuestas.
+2. **Actividades calificadas**: traer las tareas ya calificadas que evalúan el AE, desde Google Classroom o por captura manual.
+   El docente elige qué actividades son evidencia del atributo y qué indicadores evalúa cada una.
 3. **Panel**: índice de adopción del AE y resultado de cada fuente.
-4. **Reportes**: Excel, PDF y cédula oficial por UA.
+4. **Reportes**: Excel, PDF y la cédula oficial del atributo por UA (las actividades registradas llenan el campo «actividad realizada»).
 
-Las bases creadas con versiones anteriores se actualizan solas al abrir la app (los documentos previos quedan con tipo «Sin especificar»).
+*Opcional:* **Apoyo del motor** sirve para documentos sin calificación: el motor sugiere un nivel por indicador y el docente lo confirma o corrige.
+
+Las bases creadas con versiones anteriores se actualizan solas al abrir la app.
+
+## Actividades calificadas y conectores
+
+La calificación de cada entrega (0 a 100) se convierte al nivel 1-4 con la escala de la rúbrica
+(`fuentes.evidencias.escala` o, si no existe, `fuentes.calificaciones.escala`). Volver a importar una actividad la actualiza.
+
+| Vía | Qué necesita |
+|---|---|
+| Google Classroom · archivo | El CSV de «Descargar todas las calificaciones» (tarea → Trabajo de los alumnos → ⚙). Sin credenciales. |
+| Google Classroom · conexión directa | `pip install google-api-python-client google-auth-oauthlib` y credenciales OAuth de escritorio en `data/credenciales/classroom_client.json` (carpeta ignorada por git). Sólo lectura. |
+| Captura manual | Actividad, alumno, calificación y, opcionalmente, el trabajo. |
+
+Los alumnos de Classroom se identifican por correo o por nombre; si no existen se registran con la primera parte de su correo como matrícula.
+Sólo se guardan las actividades que el docente elige (minimización de datos). `data/ejemplos/classroom_calificaciones_ejemplo.csv`
+es un archivo de prueba con el formato de Classroom.
+
+Cada conector vive en `core/conectores/` y entrega una `Lectura` (actividades y entregas); la validación, la conversión a niveles y la
+bitácora son comunes (`core/actividades.py`). Para otra plataforma (Moodle, Blackboard) basta agregar un módulo que devuelva una `Lectura`.
 
 ## Ejecutar
 
@@ -93,8 +112,9 @@ python -m pytest --cov=core tests/
 
 ## Estructura
 
-- `app.py`: punto de entrada; define el orden de las páginas (Inicio, Carga de datos, Evaluar egresado, Panel, Reportes).
+- `app.py`: punto de entrada; define el orden de las páginas (Inicio, Carga de datos, Actividades calificadas, Apoyo del motor, Panel, Reportes).
 - `paginas/`: una página por archivo.
+- `core/actividades.py` y `core/conectores/`: actividades calificadas y conectores de Classroom (archivo y API).
 - `core/`: base de datos SQLite, rúbricas, extracción de texto, evaluador, importación de fuentes
   (`importacion.py`), cálculo de adopción (`adopcion.py`) y datos de ejemplo.
 - `tests/`: pruebas automatizadas con pytest.

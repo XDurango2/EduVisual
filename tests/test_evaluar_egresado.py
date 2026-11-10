@@ -49,8 +49,8 @@ def test_evaluar_y_confirmar_un_documento():
 
     at = AppTest.from_file(PAGINA, default_timeout=60).run()
     assert not at.exception
-    por_etiqueta(at.selectbox, "Egresado").select(
-        next(o for o in por_etiqueta(at.selectbox, "Egresado").options if o.startswith("A0101"))
+    por_etiqueta(at.selectbox, "Alumno o egresado").select(
+        next(o for o in por_etiqueta(at.selectbox, "Alumno o egresado").options if o.startswith("A0101"))
     ).run()
     por_etiqueta(at.selectbox, "Tipo de documento").select("Reporte de prácticas profesionales").run()
     at.text_area[0].input(DOCUMENTO).run()

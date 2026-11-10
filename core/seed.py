@@ -9,8 +9,9 @@ from pathlib import Path
 
 import pandas as pd
 
-from core import db, importacion
+from core import actividades, db, importacion
 from core.adopcion import nivel_por_calificacion
+from core.conectores import classroom_csv
 from core.evaluador import evaluar
 from core.rubricas import cargar_rubricas
 
@@ -79,6 +80,7 @@ def sembrar(reiniciar: bool = True, semilla: int = 42) -> dict:
 
     for matricula, nombre in ALUMNOS:
         alumno_id = db.obtener_o_crear_alumno(matricula, nombre)
+        db.ejecutar("UPDATE alumnos SET correo = ? WHERE id = ?", (_correo(matricula), alumno_id))
         habilidad = rng.uniform(1.4, 3.9)
         habilidades[matricula] = habilidad
         for asig_id, asig in zip(asignatura_ids, ASIGNATURAS):
@@ -103,7 +105,48 @@ def sembrar(reiniciar: bool = True, semilla: int = 42) -> dict:
                     db.guardar_revision(fila["id"], min(max(fila["nivel_sugerido"] + ajuste, 1), 4))
 
     cargas = _sembrar_fuentes(rng, habilidades, rubrica)
-    return {"alumnos": len(ALUMNOS), "asignaturas": len(ASIGNATURAS), "evidencias": evidencias, **cargas}
+    entregas = _sembrar_classroom(rng, habilidades, rubrica)
+    return {"alumnos": len(ALUMNOS), "asignaturas": len(ASIGNATURAS), "evidencias": evidencias,
+            "actividades_calificadas": entregas, **cargas}
+
+
+def _correo(matricula: str) -> str:
+    return f"{matricula.lower()}@ejemplo.edu.mx"  # dominio ficticio: datos sintéticos
+
+
+# Actividades del curso de ejemplo en Classroom: (nombre, puntos, indicadores que evalúa o None si no tributa al AE).
+ACTIVIDADES_CLASSROOM = [
+    ("Proyecto final: diseño de la solución", 100, ["I1", "I2", "I3"]),
+    ("Tarea 4: matriz de alternativas", 50, ["I2"]),
+    ("Examen parcial 1", 100, None),
+]
+
+
+def _sembrar_classroom(rng: random.Random, habilidades: dict[str, float], rubrica: dict) -> int:
+    """Escribe un CSV con el formato de «Descargar todas las calificaciones» de Google Classroom y lo importa con el
+    conector, igual que lo haría el docente en la página «Actividades calificadas»."""
+    nombres = dict(ALUMNOS)
+    filas = [
+        ["Apellidos", "Nombre", "Dirección de correo electrónico"] + [a[0] for a in ACTIVIDADES_CLASSROOM],
+        ["Fecha", "", ""] + ["15 may 2026", "20 mar 2026", "10 mar 2026"],
+        ["Puntos", "", ""] + [str(a[1]) for a in ACTIVIDADES_CLASSROOM],
+    ]
+    for k, (matricula, habilidad) in enumerate(habilidades.items()):
+        nombre, apellido = nombres[matricula].split(" ", 1)
+        notas = []
+        for _, puntos, _ in ACTIVIDADES_CLASSROOM:
+            porcentaje = min(max(50 + (habilidad - 1) * 15 + rng.uniform(-8, 8), 30), 100)
+            notas.append(str(round(porcentaje * puntos / 100)))
+        if k == len(habilidades) - 1:
+            notas[1] = ""  # una entrega sin calificar: se omite al importar
+        filas.append([apellido, nombre, _correo(matricula)] + notas)
+    ruta = EJEMPLOS_DIR / "classroom_calificaciones_ejemplo.csv"
+    pd.DataFrame(filas).to_csv(ruta, index=False, header=False, encoding="utf-8-sig")
+
+    lectura = classroom_csv.leer(ruta.name, ruta.read_bytes())
+    seleccion = {nombre: ind for nombre, _, ind in ACTIVIDADES_CLASSROOM if ind}
+    v = actividades.validar(lectura, seleccion, ruta.name)
+    return actividades.importar(v, rubrica, ASIGNATURAS[0], lectura.origen)
 
 
 PERIODO = "2026-1"

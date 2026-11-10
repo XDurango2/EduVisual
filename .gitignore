@@ -48,3 +48,6 @@ data/ejemplos/
 
 # PDFs (presentaciones y formatos institucionales: no deben publicarse)
 *.pdf
+
+# Credenciales de Google Classroom (conexión directa): nunca se suben
+data/credenciales/

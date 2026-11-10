@@ -37,18 +37,18 @@ if not con_datos.empty:
             x=alt.X("Cumplimiento:Q", title=f"% con nivel ≥ {minimo}", axis=alt.Axis(format="%"), scale=alt.Scale(domain=[0, 1])),
             y=alt.Y("Fuente:N", title=None, sort=None),
             tooltip=["Fuente", alt.Tooltip("Cumplimiento:Q", format=".0%"), "Registros", alt.Tooltip("Nivel promedio:Q", format=".2f")],
-        ).properties(height=140),
+        ).properties(height=190),
         width="stretch",
     )
 st.caption("Calificaciones, CENEVAL y encuestas se cargan en la página «Carga de datos».")
 
 st.divider()
-st.subheader("Evidencias evaluadas con la rúbrica")
+st.subheader("Evidencias del atributo (actividades calificadas y documentos)")
 
 df = db.dataframe(
     """
     SELECT a.nombre AS alumno, s.nombre AS asignatura, ev.indicador_id,
-           ev.nivel_sugerido, ev.nivel_final, ev.revisado,
+           ev.nivel_sugerido, ev.nivel_final, ev.revisado, ev.motor,
            COALESCE(ev.nivel_final, ev.nivel_sugerido) AS nivel
     FROM evaluaciones ev
     JOIN evidencias e ON e.id = ev.evidencia_id
@@ -57,10 +57,10 @@ df = db.dataframe(
     """
 )
 if df.empty:
-    st.info("Aún no hay documentos evaluados. Evalúa uno en «Evaluar egresado» o carga los datos de ejemplo desde «Inicio».")
+    st.info("Aún no hay evidencias. Registra una en «Actividades calificadas» o carga los datos de ejemplo desde «Inicio».")
     st.stop()
 
-solo_revisadas = st.checkbox("Contar solo evaluaciones revisadas por el docente")
+solo_revisadas = st.checkbox("Contar solo niveles asignados o confirmados por el docente")
 if solo_revisadas:
     df = df[df["revisado"] == 1]
     if df.empty:
@@ -70,14 +70,14 @@ if solo_revisadas:
 df["indicador"] = df["indicador_id"].map(nombres)
 df["cumple"] = df["nivel"] >= minimo
 
-revisadas = df[df["revisado"] == 1]
+revisadas = df[(df["revisado"] == 1) & (df["motor"] != db.MOTOR_CALIFICACION)]
 c1, c2, c3 = st.columns(3)
 c1.metric(f"Cumplimiento (nivel ≥ {minimo})", f"{df['cumple'].mean():.0%}")
 c2.metric("Nivel promedio", f"{df['nivel'].mean():.2f}")
 c3.metric(
     "Concordancia motor-docente",
     f"{(revisadas['nivel_final'] == revisadas['nivel_sugerido']).mean():.0%}" if not revisadas.empty else "—",
-    help="Porcentaje de evaluaciones revisadas donde el docente dejó el nivel sugerido por el motor.",
+    help="Sólo documentos evaluados con el motor: porcentaje de sugerencias que el docente dejó igual al revisarlas.",
 )
 
 st.subheader("Cumplimiento por indicador")

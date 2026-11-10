@@ -1,7 +1,8 @@
 """Nivel de adopción de un Atributo de Egreso combinando sus fuentes (avance de RF-004).
 
 Cada fuente se convierte a la escala de la rúbrica (niveles 1-4):
-- evidencias: nivel final del docente o, si no hay revisión, el sugerido por el motor;
+- evidencias: actividades ya calificadas por el docente (la calificación se convierte al nivel con la escala de la
+  rúbrica) y, opcionalmente, documentos con el nivel sugerido por el motor y confirmado por el docente;
 - calificaciones: según la escala de la rúbrica (fuentes.calificaciones.escala);
 - CENEVAL: según el desempeño por área (fuentes.ceneval.niveles);
 - encuestas de empleadores y egresados (RF-003): según la escala de la rúbrica (fuentes.encuestas.escala)
@@ -14,7 +15,7 @@ import pandas as pd
 from core import db
 
 ETIQUETAS = {
-    "evidencias": "Evidencias (rúbrica)",
+    "evidencias": "Evidencias (actividades)",
     "calificaciones": "Calificaciones",
     "ceneval": "CENEVAL",
     "encuestas": "Encuestas",

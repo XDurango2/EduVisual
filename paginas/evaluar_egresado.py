@@ -1,5 +1,5 @@
-"""Evaluar egresado: sube un documento de egreso, el motor sugiere un nivel por indicador
-y el docente confirma o corrige en la misma página (antes eran las páginas Captura y Revisión)."""
+"""Apoyo del motor (opcional): para documentos que NO tienen calificación. El motor sugiere un nivel por
+indicador y el docente confirma o corrige. La vía principal son las actividades ya calificadas (paginas/actividades.py)."""
 import json
 
 import streamlit as st
@@ -9,17 +9,20 @@ from core.evaluador import evaluar
 from core.extraccion import texto_de_archivo
 from core.ui import iniciar, rubrica_activa
 
-iniciar("Evaluar egresado")
+iniciar("Apoyo del motor (opcional)")
 rubrica = rubrica_activa()
 niveles = rubrica["niveles"]
 nombres = {i["id"]: i["nombre"] for i in rubrica["indicadores"]}
 minimo = rubrica["nivel_minimo"]
 
+st.info(
+    "Esta página es **opcional**. Las actividades que ya tienen calificación se registran en **Actividades calificadas**. "
+    "Úsala sólo para documentos sin calificación (proyecto terminal, reporte de prácticas, portafolio…): el motor "
+    "**sugiere** un nivel por indicador y **el docente decide**; nada cuenta como definitivo hasta que lo confirma."
+)
 st.markdown(
-    "Sube un **documento de egreso** del alumno (proyecto terminal, reporte de prácticas profesionales, "
-    f"portafolio…). El motor sugiere un nivel para cada indicador de **{rubrica['id']} · {rubrica['nombre']}**, "
-    "con justificación y citas del documento, y el docente **confirma o corrige** cada nivel. "
-    "Los niveles confirmados alimentan el índice de adopción del Panel."
+    f"El motor compara el documento con la rúbrica de **{rubrica['id']} · {rubrica['nombre']}** y muestra su sugerencia "
+    "con justificación y citas."
 )
 
 
@@ -33,8 +36,8 @@ def nombre_motor(motor: str) -> str:
 egresados = db.consulta("SELECT id, matricula, nombre FROM alumnos ORDER BY nombre")
 if not egresados:
     st.info(
-        "Todavía no hay egresados registrados. Se registran al cargar sus calificaciones o resultados CENEVAL "
-        "en **Carga de datos**, o con los datos de ejemplo de la página **Inicio**."
+        "Todavía no hay alumnos registrados. Se registran al cargar sus calificaciones o resultados CENEVAL "
+        "en **Carga de datos**, al importar una actividad calificada, o con los datos de ejemplo de la página **Inicio**."
     )
     st.stop()
 
@@ -45,9 +48,9 @@ documentos = db.consulta(
        FROM evidencias e
        JOIN asignaturas s ON s.id = e.asignatura_id
        LEFT JOIN evaluaciones ev ON ev.evidencia_id = e.id
-       WHERE s.ae_id = ?
+       WHERE s.ae_id = ? AND e.origen = ?
        GROUP BY e.id ORDER BY e.id""",
-    (rubrica["id"],),
+    (rubrica["id"], db.ORIGEN_MOTOR),
 )
 por_egresado: dict[int, list[dict]] = {}
 for d in documentos:
@@ -67,12 +70,12 @@ def estado_egresado(alumno_id: int) -> str:
 # Las opciones son ids (etiqueta estable): si la etiqueta incluyera los conteos, Streamlit
 # conservaría el texto viejo después de evaluar un documento.
 por_id = {a["id"]: a for a in egresados}
-solo_pendientes = st.checkbox("Mostrar solo egresados con evaluaciones por confirmar")
+solo_pendientes = st.checkbox("Mostrar solo quienes tienen sugerencias por confirmar")
 opciones = [i for i in por_id if not solo_pendientes or any(d["pendiente"] for d in por_egresado.get(i, []))]
 if not opciones:
     st.success("No hay evaluaciones pendientes de confirmar.")
     st.stop()
-egresado = por_id[st.selectbox("Egresado", opciones, key="egresado",
+egresado = por_id[st.selectbox("Alumno o egresado", opciones, key="egresado",
                                format_func=lambda i: f"{por_id[i]['matricula']} · {por_id[i]['nombre']}")]
 st.caption(estado_egresado(egresado["id"]))
 docs_egresado = por_egresado.get(egresado["id"], [])
@@ -83,7 +86,7 @@ uas = sorted(
     | {s["nombre"] for s in db.consulta("SELECT nombre FROM asignaturas WHERE ae_id = ?", (rubrica["id"],))}
 )
 
-with st.expander("Paso 1 · Subir un documento del egresado", expanded=not docs_egresado):
+with st.expander("Paso 1 · Subir un documento", expanded=not docs_egresado):
     if not uas:
         st.error("La rúbrica no tiene unidades de aprendizaje vinculadas (fuentes.calificaciones.asignaturas).")
         st.stop()

@@ -31,7 +31,8 @@ def tablas(rubrica: dict) -> dict[str, pd.DataFrame]:
     adopcion["Cumplimiento"] = adopcion["Cumplimiento"].round(3)
 
     df = db.dataframe(
-        """SELECT a.matricula AS Matrícula, a.nombre AS Alumno, s.nombre AS "Unidad de aprendizaje", e.tipo_documento AS "Tipo de documento", ev.indicador_id,
+        """SELECT a.matricula AS Matrícula, a.nombre AS Alumno, s.nombre AS "Unidad de aprendizaje", e.tipo_documento AS "Tipo de documento",
+                  COALESCE(e.actividad, e.nombre_archivo) AS "Actividad o documento", e.calificacion AS "Calificación", ev.indicador_id,
                   COALESCE(ev.nivel_final, ev.nivel_sugerido) AS nivel, ev.revisado
            FROM evaluaciones ev JOIN evidencias e ON e.id = ev.evidencia_id
            JOIN alumnos a ON a.id = e.alumno_id JOIN asignaturas s ON s.id = e.asignatura_id
@@ -43,7 +44,7 @@ def tablas(rubrica: dict) -> dict[str, pd.DataFrame]:
         df["Indicador"] = df["indicador_id"].map(nombres)
         df["Cumple"] = df["nivel"] >= minimo
         df["Nivel"] = df["nivel"].astype(str).map(rubrica["niveles"])
-        df["Revisado por docente"] = df["revisado"].map({1: "Sí", 0: "No"})
+        df["Nivel asignado por docente"] = df["revisado"].map({1: "Sí", 0: "No"})
         por_alumno = df.pivot_table(index=["Matrícula", "Alumno"], columns="Indicador", values="nivel", aggfunc="mean").round(1)
         por_alumno["Promedio"] = por_alumno.mean(axis=1).round(2)
         por_alumno["Cumple AE"] = por_alumno["Promedio"] >= minimo
@@ -51,7 +52,7 @@ def tablas(rubrica: dict) -> dict[str, pd.DataFrame]:
         out["Por UA"] = df.groupby("Unidad de aprendizaje").agg(
             Evaluaciones=("nivel", "size"), **{"Nivel promedio": ("nivel", "mean"), "% cumplimiento": ("Cumple", "mean")}
         ).round(2).reset_index()
-        out["Detalle"] = df[["Matrícula", "Alumno", "Tipo de documento", "Unidad de aprendizaje", "Indicador", "Nivel", "Cumple", "Revisado por docente"]]
+        out["Detalle"] = df[["Matrícula", "Alumno", "Tipo de documento", "Actividad o documento", "Calificación", "Unidad de aprendizaje", "Indicador", "Nivel", "Cumple", "Nivel asignado por docente"]]
 
     enc = niveles_encuestas(rubrica)
     if not enc.empty:
@@ -166,6 +167,16 @@ def niveles_por_alumno(rubrica: dict, asignatura: str) -> pd.DataFrame:
         return pd.DataFrame()
     tabla = df.pivot_table(index=["Matrícula", "Alumno"], columns="indicador_id", values="nivel", aggfunc="mean")
     return (tabla + 0.5).apply(lambda col: col.map(lambda x: int(x) if pd.notna(x) else pd.NA)).reset_index()
+
+
+def actividades_ua(rubrica: dict, asignatura: str) -> str:
+    """Actividades calificadas de la UA, una por renglón, para el campo «actividad realizada» de la cédula."""
+    filas = db.consulta(
+        """SELECT DISTINCT e.actividad FROM evidencias e JOIN asignaturas s ON s.id = e.asignatura_id
+           WHERE s.ae_id = ? AND s.nombre = ? AND e.actividad IS NOT NULL ORDER BY e.actividad""",
+        (rubrica["id"], asignatura),
+    )
+    return "\n".join(f["actividad"] for f in filas)
 
 
 def cedula_ua(rubrica: dict, asignatura: str) -> dict[str, pd.DataFrame]:

@@ -60,7 +60,7 @@ def test_indice_combina_las_cuatro_fuentes(rubricas):
     assert (tabla["Registros"] > 0).all()
     assert abs(indice - esperado) < 1e-9
     assert set(tabla["fuente"]) == {"evidencias", "calificaciones", "ceneval", "encuestas"}
-    assert db.consulta("SELECT COUNT(*) AS n FROM cargas")[0]["n"] == 3
+    assert db.consulta("SELECT COUNT(*) AS n FROM cargas")[0]["n"] == 4  # calificaciones, CENEVAL, encuestas y actividades de Classroom
 
 
 def test_resumen_y_reporte_consolidado(rubricas):

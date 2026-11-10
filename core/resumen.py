@@ -13,7 +13,7 @@ def metricas(rubrica: dict) -> dict:
     tabla, indice = resumen_adopcion(rubrica)
 
     ev = db.dataframe(
-        """SELECT ev.indicador_id, ev.nivel_sugerido, ev.nivel_final, ev.revisado,
+        """SELECT ev.indicador_id, ev.nivel_sugerido, ev.nivel_final, ev.revisado, ev.motor,
                   COALESCE(ev.nivel_final, ev.nivel_sugerido) AS nivel
            FROM evaluaciones ev JOIN evidencias e ON e.id = ev.evidencia_id
            JOIN asignaturas s ON s.id = e.asignatura_id WHERE s.ae_id = ?""",
@@ -22,13 +22,16 @@ def metricas(rubrica: dict) -> dict:
     por_indicador = {}
     if not ev.empty:
         por_indicador = (ev.assign(cumple=ev["nivel"] >= minimo).groupby("indicador_id")["cumple"].mean()).to_dict()
+    # Las actividades calificadas ya traen el nivel del docente: no entran a la concordancia ni a los pendientes.
+    calificadas = int((ev["motor"] == db.MOTOR_CALIFICACION).sum())
+    ev = ev[ev["motor"] != db.MOTOR_CALIFICACION]
     revisadas = ev[ev["revisado"] == 1]
     concordancia = (revisadas["nivel_final"] == revisadas["nivel_sugerido"]).mean() if len(revisadas) else None
 
     enc = niveles_encuestas(rubrica)
     comentarios = enc[enc["comentario"] != ""].to_dict("records")
     return {
-        "tabla": tabla, "indice": indice, "minimo": minimo, "evaluaciones": len(ev), "revisadas": len(revisadas),
+        "tabla": tabla, "indice": indice, "minimo": minimo, "calificadas": calificadas, "evaluaciones": len(ev), "revisadas": len(revisadas),
         "concordancia": concordancia, "por_indicador": por_indicador, "comentarios": comentarios,
     }
 
@@ -58,9 +61,11 @@ def resumen_preliminar(rubrica: dict, m: dict | None = None) -> str:
             f"El indicador más débil en evidencias es «{nombres.get(ind_bajo, ind_bajo)}» "
             f"({m['por_indicador'][ind_bajo]:.0%} con nivel satisfactorio)."
         )
+    if m["calificadas"]:
+        lineas.append(f"{m['calificadas']} valoraciones provienen de actividades ya calificadas por el docente.")
     if m["evaluaciones"]:
         pendientes = m["evaluaciones"] - m["revisadas"]
-        texto = f"El docente ha revisado {m['revisadas']} de {m['evaluaciones']} evaluaciones"
+        texto = f"De las sugerencias del motor, el docente ha revisado {m['revisadas']} de {m['evaluaciones']}"
         if m["concordancia"] is not None:
             texto += f"; en las revisadas coincide con el motor el {m['concordancia']:.0%}"
         lineas.append(texto + (f". Quedan {pendientes} pendientes de revisión." if pendientes else "."))

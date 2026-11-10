@@ -14,13 +14,18 @@ TIPOS_DOCUMENTO = [
     "Portafolio de evidencias",
     "Otro",
 ]
+TIPO_ACTIVIDAD = "Actividad calificada"
+# Origen de una evidencia: documento evaluado con el motor, o actividad ya calificada por el docente.
+ORIGEN_MOTOR = "motor"
+MOTOR_CALIFICACION = "calificacion"  # valor de evaluaciones.motor cuando el nivel viene de la calificación del docente
 SIN_TIPO = "Sin especificar"  # evidencias capturadas antes de que existiera el campo
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS alumnos (
     id INTEGER PRIMARY KEY,
     matricula TEXT UNIQUE NOT NULL,
-    nombre TEXT NOT NULL
+    nombre TEXT NOT NULL,
+    correo TEXT
 );
 CREATE TABLE IF NOT EXISTS asignaturas (
     id INTEGER PRIMARY KEY,
@@ -34,6 +39,9 @@ CREATE TABLE IF NOT EXISTS evidencias (
     nombre_archivo TEXT NOT NULL,
     texto TEXT NOT NULL,
     tipo_documento TEXT NOT NULL DEFAULT 'Sin especificar',
+    origen TEXT NOT NULL DEFAULT 'motor',
+    actividad TEXT,
+    calificacion REAL,
     fecha TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS evaluaciones (
@@ -109,10 +117,21 @@ def conexion():
 def init_db():
     with conexion() as con:
         con.executescript(SCHEMA)
-        # Migración: bases creadas antes de agregar el tipo de documento a las evidencias.
-        columnas = {c["name"] for c in con.execute("PRAGMA table_info(evidencias)")}
-        if "tipo_documento" not in columnas:
-            con.execute(f"ALTER TABLE evidencias ADD COLUMN tipo_documento TEXT NOT NULL DEFAULT '{SIN_TIPO}'")
+        # Migraciones: columnas que se agregaron después de la primera versión.
+        nuevas = {
+            "evidencias": {
+                "tipo_documento": f"TEXT NOT NULL DEFAULT '{SIN_TIPO}'",
+                "origen": f"TEXT NOT NULL DEFAULT '{ORIGEN_MOTOR}'",
+                "actividad": "TEXT",
+                "calificacion": "REAL",
+            },
+            "alumnos": {"correo": "TEXT"},
+        }
+        for tabla, columnas in nuevas.items():
+            existentes = {c["name"] for c in con.execute(f"PRAGMA table_info({tabla})")}
+            for columna, tipo in columnas.items():
+                if columna not in existentes:
+                    con.execute(f"ALTER TABLE {tabla} ADD COLUMN {columna} {tipo}")
 
 
 def consulta(sql: str, params: tuple = ()) -> list[dict]:

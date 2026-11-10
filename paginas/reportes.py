@@ -12,7 +12,8 @@ nombres = {i["id"]: i["nombre"] for i in rubrica["indicadores"]}
 
 df = db.dataframe(
     """
-    SELECT a.matricula AS Matrícula, a.nombre AS Alumno, s.nombre AS "Unidad de aprendizaje", e.tipo_documento AS "Tipo de documento", ev.indicador_id,
+    SELECT a.matricula AS Matrícula, a.nombre AS Alumno, s.nombre AS "Unidad de aprendizaje", e.tipo_documento AS "Tipo de documento",
+                  COALESCE(e.actividad, e.nombre_archivo) AS "Actividad o documento", e.calificacion AS "Calificación", ev.indicador_id,
            COALESCE(ev.nivel_final, ev.nivel_sugerido) AS nivel, ev.revisado
     FROM evaluaciones ev
     JOIN evidencias e ON e.id = ev.evidencia_id
@@ -21,14 +22,14 @@ df = db.dataframe(
     """
 )
 if df.empty:
-    st.info("No hay evaluaciones para reportar.")
+    st.info("No hay evidencias para reportar. Registra una en «Actividades calificadas».")
     st.stop()
 
 df["Indicador"] = df["indicador_id"].map(nombres)
 df["Cumple"] = df["nivel"] >= minimo
 etiqueta = {k: v for k, v in rubrica["niveles"].items()}
 df["Nivel"] = df["nivel"].astype(str).map(etiqueta)
-df["Revisado por docente"] = df["revisado"].map({1: "Sí", 0: "No"})
+df["Nivel asignado por docente"] = df["revisado"].map({1: "Sí", 0: "No"})
 
 st.caption(f"{rubrica['id']} · {rubrica['nombre']} · cumple con nivel ≥ {minimo}")
 
@@ -62,7 +63,7 @@ st.subheader("Programa educativo")
 st.metric("Cumplimiento global del AE", f"{df['Cumple'].mean():.0%}")
 
 st.subheader("Exportar")
-detalle = df[["Matrícula", "Alumno", "Tipo de documento", "Unidad de aprendizaje", "Indicador", "Nivel", "Cumple", "Revisado por docente"]]
+detalle = df[["Matrícula", "Alumno", "Tipo de documento", "Actividad o documento", "Calificación", "Unidad de aprendizaje", "Indicador", "Nivel", "Cumple", "Nivel asignado por docente"]]
 c1, c2, c3 = st.columns(3)
 # utf-8-sig para que Excel abra bien los acentos.
 c1.download_button("Detalle (CSV)", detalle.to_csv(index=False).encode("utf-8-sig"), "ae_detalle.csv", "text/csv")
@@ -88,6 +89,7 @@ with st.expander("Datos del formato y descarga"):
         "periodo": c3.text_input("Periodo"),
         "elaboro": c1.text_input("Elaboró"),
         "reviso": c2.text_input("Revisó"),
-        "actividad": st.text_area("Descripción de la actividad realizada"),
+        "actividad": st.text_area("Descripción de la actividad realizada", value=reportes.actividades_ua(rubrica, asignatura),
+                                  key=f"actividad_{asignatura}"),
     }
     st.download_button("Cédula (PDF)", reportes.cedula_pdf(rubrica, asignatura, datos), f"cedula_{rubrica['id']}.pdf", "application/pdf")

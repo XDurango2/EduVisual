@@ -9,6 +9,10 @@ reportlab  # reporte en PDF
 # pypdf
 # python-docx
 
+# Opcionales para la conexión directa con Google Classroom (sin ellas se usa el archivo de calificaciones)
+# google-api-python-client
+# google-auth-oauthlib
+
 # Pruebas automatizadas
 # pytest
 # pytest-cov
