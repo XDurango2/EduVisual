@@ -1,59 +1,12 @@
+"""Punto de entrada: `streamlit run app.py`. Define las páginas en el orden del flujo de trabajo."""
 import streamlit as st
 
-from core import db, seed
-from core.ui import iniciar, rubrica_activa
+st.set_page_config(page_title="EduVisual", page_icon="📊", layout="wide")
 
-iniciar("EduVisual")
-rubrica = rubrica_activa()
-
-st.markdown(
-    "Prueba de concepto para evaluar **Atributos de Egreso** a partir de evidencias estudiantiles. "
-    "El motor sugiere un nivel por indicador con justificación y citas; el docente confirma o corrige."
-)
-
-st.subheader(f"{rubrica['id']} · {rubrica['nombre']}")
-st.caption(f"{rubrica['programa']} · {rubrica['descripcion']}")
-
-validacion = rubrica.get("validacion", {"estado": "pendiente"})
-if validacion["estado"] == "validada":
-    st.success(f"Rúbrica validada por {validacion.get('validado_por')} el {validacion.get('fecha')}.")
-else:
-    st.warning(f"Validación académica de la rúbrica: **{validacion['estado']}**. {validacion.get('observaciones', '')}")
-
-fuentes = rubrica.get("fuentes", {})
-if fuentes:
-    with st.expander("Fuentes de datos vinculadas a este Atributo de Egreso"):
-        for clave, cfg in fuentes.items():
-            detalle = ""
-            if clave == "calificaciones":
-                detalle = " — UA: " + ", ".join(cfg["asignaturas"])
-            elif clave == "ceneval":
-                detalle = f" — {cfg['examen']}; áreas: " + ", ".join(cfg["areas"])
-            elif clave == "encuestas":
-                detalle = (f" — {cfg['pregunta']}" if cfg.get("pregunta") else "") + " (" + " y ".join(cfg.get("tipos", ["empleador", "egresado"])) + ")"
-            st.markdown(f"- **{clave.capitalize()}** (peso {cfg['peso']:.0%}){detalle}")
-for ind in rubrica["indicadores"]:
-    with st.expander(f"{ind['id']} · {ind['nombre']}"):
-        st.write(ind["descripcion"])
-        for nivel, desc in ind["niveles"].items():
-            st.markdown(f"- **{nivel} · {rubrica['niveles'][nivel]}:** {desc}")
-
-st.divider()
-resumen = db.consulta(
-    "SELECT (SELECT COUNT(*) FROM alumnos) AS alumnos, (SELECT COUNT(*) FROM evidencias) AS evidencias, "
-    "(SELECT COUNT(*) FROM evaluaciones WHERE revisado = 1) AS revisadas, "
-    "(SELECT COUNT(*) FROM calificaciones) AS calificaciones, (SELECT COUNT(*) FROM resultados_ceneval) AS ceneval, "
-    "(SELECT COUNT(*) FROM encuestas) AS encuestas"
-)[0]
-c1, c2, c3, c4, c5, c6 = st.columns(6)
-c1.metric("Alumnos", resumen["alumnos"])
-c2.metric("Evidencias", resumen["evidencias"])
-c3.metric("Evaluaciones revisadas", resumen["revisadas"])
-c4.metric("Calificaciones", resumen["calificaciones"])
-c5.metric("Resultados CENEVAL", resumen["ceneval"])
-c6.metric("Encuestas", resumen["encuestas"])
-
-st.write("Los datos de ejemplo son sintéticos. Cargarlos **reemplaza** todo lo guardado en la base local.")
-if st.button("Cargar datos de ejemplo"):
-    st.success(f"Listo: {seed.sembrar()}")
-    st.rerun()
+st.navigation([
+    st.Page("paginas/inicio.py", title="Inicio", icon=":material/home:", default=True),
+    st.Page("paginas/carga_de_datos.py", title="Carga de datos", icon=":material/upload_file:"),
+    st.Page("paginas/evaluar_egresado.py", title="Evaluar egresado", icon=":material/fact_check:"),
+    st.Page("paginas/panel.py", title="Panel", icon=":material/monitoring:"),
+    st.Page("paginas/reportes.py", title="Reportes", icon=":material/description:"),
+]).run()

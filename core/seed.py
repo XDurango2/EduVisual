@@ -54,8 +54,11 @@ FRAGMENTOS = {
 TITULOS = {"I1": "1. Planteamiento del problema", "I2": "2. Alternativas de solución", "I3": "3. Validación y resultados"}
 
 
+TIPO_EJEMPLO = "Proyecto terminal"
+
+
 def _redactar(asignatura: str, alumno: str, niveles: dict[str, int]) -> str:
-    partes = [f"Reporte de proyecto - {asignatura}", f"Alumno: {alumno}", ""]
+    partes = [f"{TIPO_EJEMPLO} - elaborado en la UA {asignatura}", f"Egresado: {alumno}", ""]
     for ind_id, nivel in niveles.items():
         partes += [TITULOS[ind_id], FRAGMENTOS[ind_id][nivel], ""]
     return "\n".join(partes)
@@ -87,7 +90,7 @@ def sembrar(reiniciar: bool = True, semilla: int = 42) -> dict:
             archivo = f"{matricula}_{asig.lower().replace(' ', '_')}.txt"
             (EJEMPLOS_DIR / archivo).write_text(texto, encoding="utf-8")
 
-            evidencia_id = db.guardar_evidencia(alumno_id, asig_id, archivo, texto)
+            evidencia_id = db.guardar_evidencia(alumno_id, asig_id, archivo, texto, TIPO_EJEMPLO)
             resultados, _ = evaluar(texto, rubrica)
             for r in resultados:
                 db.guardar_evaluacion(evidencia_id, r)

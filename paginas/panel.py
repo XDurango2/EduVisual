@@ -57,7 +57,7 @@ df = db.dataframe(
     """
 )
 if df.empty:
-    st.info("No hay evaluaciones todavía. Carga los datos de ejemplo desde la página principal.")
+    st.info("Aún no hay documentos evaluados. Evalúa uno en «Evaluar egresado» o carga los datos de ejemplo desde «Inicio».")
     st.stop()
 
 solo_revisadas = st.checkbox("Contar solo evaluaciones revisadas por el docente")

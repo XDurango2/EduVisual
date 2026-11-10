@@ -6,7 +6,7 @@ from streamlit.testing.v1 import AppTest
 from core import seed
 
 RAIZ = Path(__file__).resolve().parent.parent
-PAGINAS = ["app.py"] + sorted(f"pages/{p.name}" for p in (RAIZ / "pages").glob("*.py"))
+PAGINAS = ["app.py"] + sorted(f"paginas/{p.name}" for p in (RAIZ / "paginas").glob("*.py"))
 
 
 @pytest.mark.parametrize("pagina", PAGINAS)

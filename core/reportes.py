@@ -31,7 +31,7 @@ def tablas(rubrica: dict) -> dict[str, pd.DataFrame]:
     adopcion["Cumplimiento"] = adopcion["Cumplimiento"].round(3)
 
     df = db.dataframe(
-        """SELECT a.matricula AS Matrícula, a.nombre AS Alumno, s.nombre AS "Unidad de aprendizaje", ev.indicador_id,
+        """SELECT a.matricula AS Matrícula, a.nombre AS Alumno, s.nombre AS "Unidad de aprendizaje", e.tipo_documento AS "Tipo de documento", ev.indicador_id,
                   COALESCE(ev.nivel_final, ev.nivel_sugerido) AS nivel, ev.revisado
            FROM evaluaciones ev JOIN evidencias e ON e.id = ev.evidencia_id
            JOIN alumnos a ON a.id = e.alumno_id JOIN asignaturas s ON s.id = e.asignatura_id
@@ -51,7 +51,7 @@ def tablas(rubrica: dict) -> dict[str, pd.DataFrame]:
         out["Por UA"] = df.groupby("Unidad de aprendizaje").agg(
             Evaluaciones=("nivel", "size"), **{"Nivel promedio": ("nivel", "mean"), "% cumplimiento": ("Cumple", "mean")}
         ).round(2).reset_index()
-        out["Detalle"] = df[["Matrícula", "Alumno", "Unidad de aprendizaje", "Indicador", "Nivel", "Cumple", "Revisado por docente"]]
+        out["Detalle"] = df[["Matrícula", "Alumno", "Tipo de documento", "Unidad de aprendizaje", "Indicador", "Nivel", "Cumple", "Revisado por docente"]]
 
     enc = niveles_encuestas(rubrica)
     if not enc.empty:

@@ -1,9 +1,20 @@
 # EduVisual
 
-Prueba de concepto (Streamlit) para evaluar Atributos de Egreso a partir de evidencias estudiantiles.
+Prueba de concepto (Streamlit) para evaluar qué tanto adoptaron los egresados un Atributo de Egreso (AE)
+a partir de sus documentos de egreso (proyecto terminal, reporte de prácticas profesionales, de servicio social o portafolio).
 El alcance actual es un solo programa educativo (Ingeniería en Computación) con una sola unidad de aprendizaje (UA), Ingeniería de Software, con datos sintéticos para demostración.
-El motor sugiere un nivel por indicador con justificación y citas; el docente confirma o corrige.
 Además integra calificaciones, resultados CENEVAL y encuestas a empleadores para calcular el nivel de adopción de cada AE.
+
+## Flujo de uso
+
+1. **Carga de datos**: importar calificaciones, resultados CENEVAL y encuestas (aquí se registran los egresados).
+2. **Evaluar egresado**: elegir al egresado, subir un documento e indicar su tipo; el motor sugiere un nivel por
+   indicador con justificación y citas, y el docente confirma o corrige en la misma página.
+   La UA donde se elaboró el documento es un dato secundario que sólo agrupa resultados en la cédula oficial.
+3. **Panel**: índice de adopción del AE y resultado de cada fuente.
+4. **Reportes**: Excel, PDF y cédula oficial por UA.
+
+Las bases creadas con versiones anteriores se actualizan solas al abrir la app (los documentos previos quedan con tipo «Sin especificar»).
 
 ## Ejecutar
 
@@ -82,7 +93,8 @@ python -m pytest --cov=core tests/
 
 ## Estructura
 
-- `app.py` y `pages/`: interfaz (captura, revisión, panel, reportes).
+- `app.py`: punto de entrada; define el orden de las páginas (Inicio, Carga de datos, Evaluar egresado, Panel, Reportes).
+- `paginas/`: una página por archivo.
 - `core/`: base de datos SQLite, rúbricas, extracción de texto, evaluador, importación de fuentes
   (`importacion.py`), cálculo de adopción (`adopcion.py`) y datos de ejemplo.
 - `tests/`: pruebas automatizadas con pytest.

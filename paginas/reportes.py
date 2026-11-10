@@ -12,7 +12,7 @@ nombres = {i["id"]: i["nombre"] for i in rubrica["indicadores"]}
 
 df = db.dataframe(
     """
-    SELECT a.matricula AS Matrícula, a.nombre AS Alumno, s.nombre AS "Unidad de aprendizaje", ev.indicador_id,
+    SELECT a.matricula AS Matrícula, a.nombre AS Alumno, s.nombre AS "Unidad de aprendizaje", e.tipo_documento AS "Tipo de documento", ev.indicador_id,
            COALESCE(ev.nivel_final, ev.nivel_sugerido) AS nivel, ev.revisado
     FROM evaluaciones ev
     JOIN evidencias e ON e.id = ev.evidencia_id
@@ -62,7 +62,7 @@ st.subheader("Programa educativo")
 st.metric("Cumplimiento global del AE", f"{df['Cumple'].mean():.0%}")
 
 st.subheader("Exportar")
-detalle = df[["Matrícula", "Alumno", "Unidad de aprendizaje", "Indicador", "Nivel", "Cumple", "Revisado por docente"]]
+detalle = df[["Matrícula", "Alumno", "Tipo de documento", "Unidad de aprendizaje", "Indicador", "Nivel", "Cumple", "Revisado por docente"]]
 c1, c2, c3 = st.columns(3)
 # utf-8-sig para que Excel abra bien los acentos.
 c1.download_button("Detalle (CSV)", detalle.to_csv(index=False).encode("utf-8-sig"), "ae_detalle.csv", "text/csv")

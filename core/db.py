@@ -6,6 +6,16 @@ import pandas as pd
 
 DB_PATH = Path(__file__).resolve().parent.parent / "data" / "eduvisual.db"
 
+# Documentos de egreso que se evalúan contra la rúbrica del AE.
+TIPOS_DOCUMENTO = [
+    "Proyecto terminal",
+    "Reporte de prácticas profesionales",
+    "Reporte de servicio social profesional",
+    "Portafolio de evidencias",
+    "Otro",
+]
+SIN_TIPO = "Sin especificar"  # evidencias capturadas antes de que existiera el campo
+
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS alumnos (
     id INTEGER PRIMARY KEY,
@@ -23,6 +33,7 @@ CREATE TABLE IF NOT EXISTS evidencias (
     asignatura_id INTEGER NOT NULL REFERENCES asignaturas(id),
     nombre_archivo TEXT NOT NULL,
     texto TEXT NOT NULL,
+    tipo_documento TEXT NOT NULL DEFAULT 'Sin especificar',
     fecha TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS evaluaciones (
@@ -98,6 +109,10 @@ def conexion():
 def init_db():
     with conexion() as con:
         con.executescript(SCHEMA)
+        # Migración: bases creadas antes de agregar el tipo de documento a las evidencias.
+        columnas = {c["name"] for c in con.execute("PRAGMA table_info(evidencias)")}
+        if "tipo_documento" not in columnas:
+            con.execute(f"ALTER TABLE evidencias ADD COLUMN tipo_documento TEXT NOT NULL DEFAULT '{SIN_TIPO}'")
 
 
 def consulta(sql: str, params: tuple = ()) -> list[dict]:
@@ -140,10 +155,11 @@ def obtener_o_crear_asignatura(nombre: str, ae_id: str) -> int:
     return ejecutar("INSERT INTO asignaturas (nombre, ae_id) VALUES (?, ?)", (nombre, ae_id))
 
 
-def guardar_evidencia(alumno_id: int, asignatura_id: int, nombre_archivo: str, texto: str) -> int:
+def guardar_evidencia(alumno_id: int, asignatura_id: int, nombre_archivo: str, texto: str,
+                      tipo_documento: str = SIN_TIPO) -> int:
     return ejecutar(
-        "INSERT INTO evidencias (alumno_id, asignatura_id, nombre_archivo, texto) VALUES (?, ?, ?, ?)",
-        (alumno_id, asignatura_id, nombre_archivo, texto),
+        "INSERT INTO evidencias (alumno_id, asignatura_id, nombre_archivo, texto, tipo_documento) VALUES (?, ?, ?, ?, ?)",
+        (alumno_id, asignatura_id, nombre_archivo, texto, tipo_documento),
     )
 
 
